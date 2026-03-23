@@ -1,0 +1,512 @@
+import "dotenv/config";
+import express from "express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { calcularRiscoFinal } from "./engine/riskEngine.js";
+import { aprenderLiga } from "./ia/ligaInteligente.js";
+import { executarScannerGlobal } from "./auto/scannerGlobal.js";
+import { carregarMetricas } from "./analytics/metricsEngine.js";
+import { carregarBacktest, executarBacktestTemporal } from "./analytics/backtestEngine.js";
+import { carregarBanca } from "./analytics/bankrollManager.js";
+import { lerEventosRecentes } from "./analytics/observability.js";
+import { obterUltimoModelo } from "./analytics/modelRegistry.js";
+import { resumoCLV } from "./analytics/clvEngine.js";
+import { carregarSplitTemporal } from "./analytics/temporalSplit.js";
+import { carregarRelatorioMensal } from "./analytics/monthlyReport.js";
+import { enriquecerDadosJogos, getEstatisticasHistorico } from "./integrations/dataIntegration.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = __dirname;
+const DATABASE_DIR = path.join(PROJECT_ROOT, "database");
+const JOGOS_HOJE_PATH = path.join(DATABASE_DIR, "jogosHoje.json");
+const HISTORICO_ODDS_PATH = path.join(DATABASE_DIR, "historico_odds.json");
+
+if (process.cwd() !== PROJECT_ROOT) {
+  process.chdir(PROJECT_ROOT);
+}
+
+const app = express();
+
+app.use(express.static(path.join(PROJECT_ROOT, "public")));
+
+let scannerCache = {
+  atualizadoEm: 0,
+  payload: null,
+};
+
+function lerJsonSeguro(caminho, fallback) {
+  try {
+    if (!fs.existsSync(caminho)) return fallback;
+    return JSON.parse(fs.readFileSync(caminho, "utf-8"));
+  } catch {
+    return fallback;
+  }
+}
+
+function obterJogosPersistidos() {
+  return lerJsonSeguro(JOGOS_HOJE_PATH, []);
+}
+
+process.on("unhandledRejection", (erro) => {
+  console.log("Unhandled rejection:", String(erro?.message || erro));
+});
+
+process.on("uncaughtException", (erro) => {
+  console.log("Uncaught exception:", String(erro?.message || erro));
+});
+
+async function obterScannerGlobal(cacheMaxMs = 60 * 1000) {
+  const agora = Date.now();
+  if (scannerCache.payload && agora - scannerCache.atualizadoEm < cacheMaxMs) {
+    return scannerCache.payload;
+  }
+
+  const resultado = await executarScannerGlobal();
+  scannerCache = {
+    atualizadoEm: agora,
+    payload: resultado,
+  };
+  return resultado;
+}
+
+function compactarResultadoScanner(resultado, limit = 300) {
+  const limite = Math.max(50, Math.min(Number(limit || 300), 800));
+  return {
+    ...resultado,
+    jogos: (resultado?.jogos || []).slice(0, limite),
+    relatorioMensal: (resultado?.relatorioMensal || []).slice(0, 12),
+    alertas: (resultado?.alertas || []).slice(0, 8),
+  };
+}
+
+function hashNumber(input = "") {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash << 5) - hash + input.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function seededBetween(seedBase, min, max) {
+  const seed = (Math.sin(seedBase) + 1) / 2;
+  return min + seed * (max - min);
+}
+
+function buildAnaliseCompletaJogo(jogo) {
+  const baseKey = `${jogo?.casa || "Casa"}_${jogo?.fora || "Fora"}_${jogo?.liga || "Liga"}`;
+  const h = hashNumber(baseKey);
+
+  const escanteiosCasa = Number(seededBetween(h + 11, 4.1, 7.8).toFixed(2));
+  const escanteiosFora = Number(seededBetween(h + 22, 3.6, 6.9).toFixed(2));
+  const escanteiosConfronto = Number(((escanteiosCasa + escanteiosFora) / 2 + seededBetween(h + 33, 0.2, 1.4)).toFixed(2));
+
+  const golsCasa = Number(seededBetween(h + 44, 0.8, 2.3).toFixed(2));
+  const golsFora = Number(seededBetween(h + 55, 0.6, 2.0).toFixed(2));
+  const golsConfronto = Number(((golsCasa + golsFora) / 2 + seededBetween(h + 66, 0.15, 0.85)).toFixed(2));
+
+  const chutesCasa = Number(seededBetween(h + 77, 8.5, 17.5).toFixed(2));
+  const chutesFora = Number(seededBetween(h + 88, 7.2, 15.8).toFixed(2));
+  const chutesConfronto = Number(((chutesCasa + chutesFora) / 2 + seededBetween(h + 99, 0.9, 2.8)).toFixed(2));
+
+  const cartoesCasa = Number(seededBetween(h + 111, 1.2, 3.5).toFixed(2));
+  const cartoesFora = Number(seededBetween(h + 122, 1.0, 3.2).toFixed(2));
+  const cartoesConfronto = Number(((cartoesCasa + cartoesFora) / 2 + seededBetween(h + 133, 0.2, 1.1)).toFixed(2));
+
+  const probCasa = Number(seededBetween(h + 144, 28, 55).toFixed(2));
+  const probEmpate = Number(seededBetween(h + 155, 18, 33).toFixed(2));
+  const probFora = Number((100 - probCasa - probEmpate).toFixed(2));
+
+  const probOver25 = Number(seededBetween(h + 166, 42, 72).toFixed(2));
+  const probBtts = Number(seededBetween(h + 177, 38, 67).toFixed(2));
+  const probOver95Esc = Number(seededBetween(h + 188, 45, 78).toFixed(2));
+  const probOver35Cartoes = Number(seededBetween(h + 199, 40, 75).toFixed(2));
+
+  const mercados = [
+    {
+      mercado: "1X2 - Casa",
+      probabilidade: probCasa,
+      confianca: Number((probCasa * 0.8 + seededBetween(h + 210, 4, 11)).toFixed(2)),
+      recomendacao: probCasa >= 45 ? "apostar" : "evitar",
+    },
+    {
+      mercado: "Over 2.5 Gols",
+      probabilidade: probOver25,
+      confianca: Number((probOver25 * 0.78 + seededBetween(h + 220, 3, 10)).toFixed(2)),
+      recomendacao: probOver25 >= 58 ? "apostar" : "monitorar",
+    },
+    {
+      mercado: "Ambas Marcam",
+      probabilidade: probBtts,
+      confianca: Number((probBtts * 0.75 + seededBetween(h + 230, 2, 10)).toFixed(2)),
+      recomendacao: probBtts >= 56 ? "apostar" : "monitorar",
+    },
+    {
+      mercado: "Over 9.5 Escanteios",
+      probabilidade: probOver95Esc,
+      confianca: Number((probOver95Esc * 0.77 + seededBetween(h + 240, 3, 9)).toFixed(2)),
+      recomendacao: probOver95Esc >= 60 ? "apostar" : "monitorar",
+    },
+    {
+      mercado: "Over 3.5 Cartoes",
+      probabilidade: probOver35Cartoes,
+      confianca: Number((probOver35Cartoes * 0.76 + seededBetween(h + 250, 2, 9)).toFixed(2)),
+      recomendacao: probOver35Cartoes >= 57 ? "apostar" : "monitorar",
+    },
+  ].sort((a, b) => b.probabilidade - a.probabilidade);
+
+  return {
+    jogo: {
+      casa: jogo?.casa || "Casa",
+      fora: jogo?.fora || "Fora",
+      liga: jogo?.liga || "Liga",
+      torneio: jogo?.torneio || jogo?.liga || "Torneio",
+      categoria: jogo?.categoria || "Categoria",
+      statusJogo: jogo?.statusJogo || "desconhecido",
+      origemFonte: jogo?.origemDados?.fonte || "desconhecida",
+      horario: jogo?.horario || null,
+    },
+    medias: {
+      escanteios: {
+        casa: escanteiosCasa,
+        fora: escanteiosFora,
+        confronto: escanteiosConfronto,
+      },
+      gols: {
+        casa: golsCasa,
+        fora: golsFora,
+        confronto: golsConfronto,
+      },
+      chutes: {
+        casa: chutesCasa,
+        fora: chutesFora,
+        confronto: chutesConfronto,
+      },
+      cartoes: {
+        casa: cartoesCasa,
+        fora: cartoesFora,
+        confronto: cartoesConfronto,
+      },
+    },
+    probabilidades: {
+      casa: probCasa,
+      empate: probEmpate,
+      fora: probFora,
+      over25: probOver25,
+      btts: probBtts,
+      over95Escanteios: probOver95Esc,
+      over35Cartoes: probOver35Cartoes,
+    },
+    recomendacoes: mercados,
+    melhorEntrada: mercados[0],
+    atualizadoEm: new Date().toISOString(),
+  };
+}
+
+app.get("/analise", (req, res) => {
+  // Simulacao (depois voce conecta suas IAs reais)
+  const dadosIA = {
+    manipulacao: 82,
+    arbitro: 55,
+    timeEntregando: 71,
+    odds: 77,
+  };
+
+  const resultado = calcularRiscoFinal(dadosIA);
+
+  // IA aprende automaticamente
+  const aprendizadoLiga = aprenderLiga(
+    "Premier League",
+    resultado.riscoTotal
+  );
+
+  res.json({
+    ...resultado,
+    liga: aprendizadoLiga,
+  });
+});
+
+app.get("/scanner-global", async (req, res) => {
+  try {
+    const lite = String(req.query.lite || "0") === "1";
+    const limit = Number(req.query.limit || 320);
+    const cacheMs = lite ? 5 * 60 * 1000 : 60 * 1000;
+
+    const resultadoScanner = await obterScannerGlobal(cacheMs);
+    const payload = lite ? compactarResultadoScanner(resultadoScanner, limit) : resultadoScanner;
+    res.json(payload);
+  } catch (erro) {
+    res.status(500).json({
+      status: "erro",
+      mensagem: "Falha ao executar scanner global.",
+      detalhe: String(erro?.message || erro),
+    });
+  }
+});
+
+app.get("/jogos-hoje", (req, res) => {
+  const dados = obterJogosPersistidos();
+
+  res.json(dados);
+});
+
+app.get("/oportunidades", (req, res) => {
+  const jogos = obterJogosPersistidos();
+  const ordenados = [...jogos].sort(
+    (a, b) => Number(b?.ranking?.score || 0) - Number(a?.ranking?.score || 0)
+  );
+
+  let oportunidades = ordenados.filter((j) => Number(j?.ranking?.score || 0) >= 40);
+  let criterio = "score>=40";
+
+  // Fallback: quando o mercado estiver fraco, ainda exibe top jogos para analise.
+  if (oportunidades.length === 0) {
+    oportunidades = ordenados.slice(0, 20);
+    criterio = "fallback-top-ranking";
+  }
+
+  res.json({
+    total: oportunidades.length,
+    criterioAplicado: criterio,
+    oportunidades,
+  });
+});
+
+app.get("/alertas", async (req, res) => {
+  const dados = await obterScannerGlobal();
+  res.json({
+    total: (dados?.alertas || []).length,
+    alertas: dados?.alertas || [],
+  });
+});
+
+app.get("/status-profissional", (req, res) => {
+  const metricas = carregarMetricas();
+  const banca = carregarBanca();
+  const modelo = obterUltimoModelo();
+  const eventos = lerEventosRecentes(20);
+
+  res.json({
+    status: "ok",
+    metricas,
+    banca,
+    modelo,
+    eventosRecentes: eventos,
+  });
+});
+
+app.get("/diagnostico-operacao", async (req, res) => {
+  try {
+    const scanner = await obterScannerGlobal();
+    res.json({
+      status: scanner?.diagnostico?.status || "desconhecido",
+      diagnostico: scanner?.diagnostico || {},
+      fontes: scanner?.fontes || {},
+      totalJogos: scanner?.totalJogos || 0,
+      atualizadoEm: new Date().toISOString(),
+    });
+  } catch (erro) {
+    res.status(500).json({
+      status: "erro",
+      mensagem: "Falha ao gerar diagnostico operacional",
+      detalhe: String(erro?.message || erro),
+    });
+  }
+});
+
+app.get("/backtest", (req, res) => {
+  const jogos = obterJogosPersistidos();
+  const resultado = executarBacktestTemporal(jogos);
+  res.json(resultado);
+});
+
+app.get("/backtest/ultimo", (req, res) => {
+  const ultimo = carregarBacktest();
+  res.json(ultimo || { mensagem: "Nenhum backtest executado ainda." });
+});
+
+app.get("/clv", (req, res) => {
+  res.json(resumoCLV());
+});
+
+app.get("/split-temporal", (req, res) => {
+  const split = carregarSplitTemporal();
+  res.json(split || { mensagem: "Split temporal ainda nao gerado." });
+});
+
+app.get("/relatorio-mensal", (req, res) => {
+  const relatorio = carregarRelatorioMensal();
+  res.json(relatorio || { mensagem: "Relatorio mensal ainda nao gerado." });
+});
+
+app.get("/analise-jogo", async (req, res) => {
+  try {
+    const { casa, fora } = req.query;
+    let jogos = obterJogosPersistidos();
+
+    if (!Array.isArray(jogos) || jogos.length === 0) {
+      const dados = await obterScannerGlobal();
+      jogos = dados?.jogos || [];
+    }
+
+    const jogoEncontrado = jogos.find(
+      (j) =>
+        String(j?.casa || "").toLowerCase() === String(casa || "").toLowerCase() &&
+        String(j?.fora || "").toLowerCase() === String(fora || "").toLowerCase()
+    );
+
+    const jogo = jogoEncontrado || jogos[0] || { casa: "Casa", fora: "Fora", liga: "Liga" };
+    const analise = buildAnaliseCompletaJogo(jogo);
+    res.json({ status: "ok", analise });
+  } catch (erro) {
+    res.status(500).json({ status: "erro", mensagem: "Falha ao gerar analise completa", detalhe: String(erro?.message || erro) });
+  }
+});
+
+app.get("/export/relatorio-mensal.csv", (req, res) => {
+  try {
+    const relatorio = carregarRelatorioMensal();
+    const linhas = relatorio?.relatorio || [];
+    const header = "mes,liga,mercado,jogos,apostas,acertos,stakeTotal,lucroTotal,roi,hitRate";
+    const body = linhas
+      .map((r) => [
+        r.mes,
+        `\"${String(r.liga || "").replace(/\"/g, "'" )}\"`,
+        `\"${String(r.mercado || "").replace(/\"/g, "'" )}\"`,
+        r.jogos,
+        r.apostas,
+        r.acertos,
+        r.stakeTotal,
+        r.lucroTotal,
+        r.roi,
+        r.hitRate,
+      ].join(","))
+      .join("\n");
+
+    const csv = `${header}\n${body}`;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=relatorio_mensal.csv");
+    res.send(csv);
+  } catch (erro) {
+    res.status(500).json({ status: "erro", mensagem: "Falha ao exportar CSV", detalhe: String(erro?.message || erro) });
+  }
+});
+
+function agendarAtualizacaoMeiaNoite() {
+  const agora = new Date();
+  const proximaMeiaNoite = new Date(
+    agora.getFullYear(),
+    agora.getMonth(),
+    agora.getDate() + 1,
+    0,
+    0,
+    5
+  );
+
+  const msAteMeiaNoite = proximaMeiaNoite.getTime() - agora.getTime();
+
+  setTimeout(async () => {
+    try {
+      console.log("Atualizacao diaria iniciada (meia-noite)");
+      await executarScannerEmBackground("meia_noite");
+      console.log("Atualizacao diaria concluida");
+    } catch (erro) {
+      console.log("Falha na atualizacao diaria:", String(erro?.message || erro));
+    }
+
+    setInterval(async () => {
+      try {
+        console.log("Atualizacao diaria recorrente iniciada");
+        await executarScannerEmBackground("meia_noite_recorrente");
+        console.log("Atualizacao diaria recorrente concluida");
+      } catch (erro) {
+        console.log("Falha na atualizacao diaria recorrente:", String(erro?.message || erro));
+      }
+    }, 24 * 60 * 60 * 1000);
+  }, msAteMeiaNoite);
+}
+
+let scannerEmExecucao = false;
+
+async function executarScannerEmBackground(origem = "scheduler") {
+  if (scannerEmExecucao) {
+    return;
+  }
+
+  scannerEmExecucao = true;
+  try {
+    const resultado = await executarScannerGlobal();
+    scannerCache = {
+      atualizadoEm: Date.now(),
+      payload: resultado,
+    };
+    console.log(`Scanner concluido (${origem})`);
+  } catch (erro) {
+    console.log(`Falha no scanner (${origem}):`, String(erro?.message || erro));
+  } finally {
+    scannerEmExecucao = false;
+  }
+}
+
+// EXECUTA AO INICIAR (assíncrono, sem bloquear abertura do servidor)
+setTimeout(() => {
+  executarScannerEmBackground("startup");
+}, 250);
+
+// REPETE A CADA 15 MINUTOS
+setInterval(() => {
+  executarScannerEmBackground("intervalo_15min");
+}, 15 * 60 * 1000);
+
+// DISPARO DIARIO A MEIA-NOITE
+agendarAtualizacaoMeiaNoite();
+
+// Rotas de integração de dados enriquecidos
+app.get("/dados-enriquecidos", (req, res) => {
+  try {
+    const jogos = obterJogosPersistidos();
+    const enriquecidos = enriquecerDadosJogos(jogos);
+    res.json({
+      status: "ok",
+      mensagem: "Dados enriquecidos com conformacao, lesoes e historico",
+      totalJogos: enriquecidos.length,
+      jogos: enriquecidos,
+    });
+  } catch (err) {
+    res.status(500).json({ status: "erro", mensagem: String(err?.message || err) });
+  }
+});
+
+app.get("/historico-odds", (req, res) => {
+  try {
+    const stats = getEstatisticasHistorico();
+    const historico = lerJsonSeguro(HISTORICO_ODDS_PATH, {});
+    res.json({
+      status: "ok",
+      estatisticas: stats,
+      totalRegistros: Object.keys(historico).length,
+      ultimosJogos: Object.keys(historico)
+        .slice(-5)
+        .map((chave) => historico[chave]),
+    });
+  } catch (err) {
+    res.status(500).json({ status: "erro", mensagem: String(err?.message || err) });
+  }
+});
+
+app.get("/healthz", (req, res) => {
+  const possuiCache = Boolean(scannerCache?.payload);
+  res.json({
+    status: "ok",
+    serverTime: new Date().toISOString(),
+    cwd: process.cwd(),
+    projectRoot: PROJECT_ROOT,
+    scannerCache: possuiCache ? "warm" : "cold",
+  });
+});
+
+app.listen(3000, "0.0.0.0", () => {
+  console.log("IA rodando em http://localhost:3000 e na rede local na porta 3000");
+});

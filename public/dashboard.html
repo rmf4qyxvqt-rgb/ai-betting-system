@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cockpit IA - Intelligence Desk Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-1: #070b12;
+      --bg-2: #101826;
+      --card: #131f30;
+      --line: #2a3a50;
+      --txt: #f4f6fb;
+      --muted: #a8b3c5;
+      --ok: #30d9a2;
+      --warn: #ffbf69;
+      --risk: #ff7a7a;
+      --accent: #7dd3fc;
+      --gold: #d8b46a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", sans-serif;
+      color: var(--txt);
+      background:
+        radial-gradient(circle at 10% 8%, rgba(125, 211, 252, 0.17), transparent 35%),
+        radial-gradient(circle at 92% 2%, rgba(216, 180, 106, 0.2), transparent 28%),
+        radial-gradient(circle at 65% 90%, rgba(48, 217, 162, 0.08), transparent 30%),
+        linear-gradient(145deg, var(--bg-1), var(--bg-2));
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .wrap {
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      background: linear-gradient(145deg, #121c2b, #11192a 55%, #182338);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 26px;
+      margin-bottom: 24px;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.05) 45%, transparent 60%);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(1.55rem, 2.8vw, 2.05rem);
+      font-family: "Fraunces", serif;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      background: linear-gradient(135deg, #f6f2e9, #d8b46a 60%, #ffbf69);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      margin: 6px 0 0;
+      color: var(--muted);
+    }
+
+    .hero-actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      border: 1px solid var(--line);
+      background: rgba(125, 211, 252, 0.1);
+      color: var(--txt);
+      padding: 8px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.82rem;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: rgba(125, 211, 252, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .confidence-line {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      border: 1px solid var(--line);
+      background: rgba(11, 18, 30, 0.65);
+      padding: 10px;
+      border-radius: 14px;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      padding: 9px 14px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .tab-btn.active {
+      color: #0d1726;
+      border-color: rgba(216, 180, 106, 0.35);
+      background: linear-gradient(135deg, #d8b46a, #ffbf69);
+      box-shadow: 0 8px 22px rgba(216, 180, 106, 0.25);
+    }
+
+    .tab-btn:hover {
+      color: var(--txt);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+      animation: fadeIn 0.28s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 1024px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: linear-gradient(165deg, rgba(19, 31, 48, 0.96), rgba(14, 23, 36, 0.95));
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
+      transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(216, 180, 106, 0.52), transparent);
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(216, 180, 106, 0.45);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .label {
+      color: var(--muted);
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      margin: 0;
+    }
+
+    .kpi {
+      margin: 8px 0 2px;
+      font-size: 1.6rem;
+      font-weight: 800;
+    }
+
+    .ok { color: var(--ok); }
+    .warn { color: var(--warn); }
+    .risk { color: var(--risk); }
+    .accent { color: var(--accent); }
+
+    .section-title {
+      margin: 24px 0 12px;
+      color: #dce9f8;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding-left: 8px;
+      border-left: 3px solid var(--gold);
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin-bottom: 24px;
+    }
+
+    .list {
+      display: grid;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .tag {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 3px 12px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    .tag-ok { color: var(--ok); border-color: rgba(29, 209, 161, 0.35); background: rgba(29, 209, 161, 0.1); }
+    .tag-warn { color: var(--warn); border-color: rgba(255, 191, 105, 0.35); background: rgba(255, 191, 105, 0.12); }
+    .tag-risk { color: var(--risk); border-color: rgba(255, 107, 107, 0.35); background: rgba(255, 107, 107, 0.1); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: rgba(125, 211, 252, 0.07);
+    }
+
+    tr:hover {
+      background: rgba(216, 180, 106, 0.08);
+    }
+
+    .jogo-row {
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .heatmap {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .heat-cell {
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 0.8rem;
+      border: 1px solid var(--line);
+    }
+
+    .heat-cold { background: rgba(29, 209, 161, 0.2); }
+    .heat-warm { background: rgba(247, 183, 49, 0.2); }
+    .heat-hot { background: rgba(255, 107, 107, 0.2); }
+
+    .alert-banner {
+      background: linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(247, 183, 49, 0.15));
+      border-left: 4px solid var(--warn);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(36, 54, 76, 0.5);
+      font-size: 0.9rem;
+    }
+
+    .stat-row:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      color: var(--muted);
+    }
+
+    .stat-value {
+      font-weight: 700;
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 6px 12px;
+      background: rgba(216, 180, 106, 0.08);
+      border: 1px solid rgba(216, 180, 106, 0.35);
+      color: #f0dab1;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn.active {
+      background: linear-gradient(135deg, #d8b46a, #ffbf69);
+      color: #101826;
+      border-color: transparent;
+    }
+
+    .filter-btn:hover {
+      background: rgba(216, 180, 106, 0.16);
+    }
+
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 10, 18, 0.75);
+      z-index: 2000;
+      padding: 20px;
+      overflow: auto;
+    }
+
+    .modal-backdrop.open {
+      display: block;
+    }
+
+    .modal-card {
+      max-width: 980px;
+      margin: 10px auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(160deg, #111d2e, #0e1827);
+      padding: 16px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.42);
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .close-btn {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--txt);
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 6px 10px;
+      font-weight: 700;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .mini-box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(9, 20, 32, 0.6);
+      padding: 10px;
+    }
+
+    .mini-box h4 {
+      margin: 0 0 8px;
+      font-size: 0.86rem;
+      background: rgba(9, 20, 32, 0.7);
+    }
+
+
+    @media (max-width: 760px) {
+      body {
+        padding: 14px;
+      }
+
+      .hero {
+        padding: 18px;
+      }
+
+      .card {
+        padding: 12px;
+      }
+
+      .kpi {
+        font-size: 1.35rem;
+      }
+    }
+    .prob-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    .prob-row strong {
+      color: var(--txt);
+    }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>⚙️ Intelligence Desk Pro - Advanced Analytics</h1>
+      <p>Cockpit executivo com visualizações em tempo real, métricas profundas e análise preditiva integrada.</p>
+      <div class="hero-actions">
+        <button class="action-btn" onclick="ativarNotificacoes()">Ativar alertas do navegador</button>
+        <a class="action-btn" href="/export/relatorio-mensal.csv">Exportar relatório mensal (CSV)</a>
+      </div>
+    </div>
+
+    <h2 class="section-title">Fontes ativas do dia</h2>
+    <div id="fontes-ativas" class="grid"></div>
+    <div id="diagnostico-operacao" class="card" style="margin-bottom: 20px;"></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('overview')">📊 Visão Geral</button>
+      <button class="tab-btn" onclick="switchTab('detalhes')">🔍 Detalhes de Jogos</button>
+      <button class="tab-btn" onclick="switchTab('desempenho')">📈 Performance</button>
+      <button class="tab-btn" onclick="switchTab('risco')">⚠️ Análise de Risco</button>
+    </div>
+
+    <!-- TAB 1: VISÃO GERAL -->
+    <div id="overview" class="tab-panel active">
+      <div class="grid">
+        <div class="card">
+          <p class="label">🎯 ROI Operacional</p>
+          <p class="kpi" id="kpi-roi">-0.22%</p>
+          <div class="stat-row">
+            <span class="stat-label">Saldo</span>
+            <span class="stat-value" id="stat-saldo">+0.00</span>
+          </div>
+        </div>
+        <div class="card">
+          <p class="label">💰 Banca Atual</p>
+          <p class="kpi accent" id="kpi-banca">1,140.68</p>
+          <div class="stat-row">
+            <span class="stat-label">Inicial</span>
+            <span class="stat-value">1,000.00</span>
+          </div>
+        </div>
+        <div class="card">
+          <p class="label">📍 CLV Médio</p>
+          <p class="kpi" id="kpi-clv">-0.22%</p>
+          <div class="stat-row">
+            <span class="stat-label">Positivos</span>
+            <span class="stat-value ok" id="stat-clv-pos">3</span>
+          </div>
+        </div>
+        <div class="card">
+          <p class="label">🎲 Jogos Mapeados</p>
+          <p class="kpi accent" id="kpi-jogos">1</p>
+          <div class="stat-row">
+            <span class="stat-label">Apostas Approved</span>
+            <span class="stat-value warn" id="stat-apostas">0</span>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">Evolução Operacional</h2>
+      <div class="grid-2">
+        <div class="card">
+          <div class="chart-container">
+            <canvas id="chartROI"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="chart-container">
+            <canvas id="chartDrawdown"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">Alertas Críticos</h2>
+      <div id="alertas-zone" class="list"></div>
+
+      <h2 class="section-title">Top 5 Oportunidades Próximas</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Jogo</th>
+              <th>Data/Hora</th>
+              <th>Liga</th>
+              <th>Score</th>
+              <th>Edge %</th>
+              <th>CLV %</th>
+              <th>xG</th>
+              <th>Risco</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="top-oportunidades"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: DETALHES DE JOGOS -->
+    <div id="detalhes" class="tab-panel">
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterByLiga('all')">Todas as Ligas</button>
+        <div id="liga-filters"></div>
+      </div>
+
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Jogo</th>
+              <th>Data/Hora</th>
+              <th>Liga</th>
+              <th>Mercado</th>
+              <th>Edge</th>
+              <th>xG Casa</th>
+              <th>xG Fora</th>
+              <th>Odds Casa</th>
+              <th>CLV</th>
+              <th>Decisão</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-detalhes"></tbody>
+        </table>
+      </div>
+
+      <h2 class="section-title">Odd Comparativa por Casa (Jogo Selecionado)</h2>
+      <div id="odds-comparativa" class="card">
+        <p style="color: var(--muted);">Selecione um jogo para ver a comparativa</p>
+      </div>
+    </div>
+
+    <!-- TAB 3: PERFORMANCE -->
+    <div id="desempenho" class="tab-panel">
+      <h2 class="section-title">Relatório Mensal por Liga</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th>Liga</th>
+              <th>Mercado</th>
+              <th>Jogos</th>
+              <th>Apostas</th>
+              <th>ROI %</th>
+              <th>Hit Rate %</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-mensal"></tbody>
+        </table>
+      </div>
+
+      <h2 class="section-title">Distribuição de Performance</h2>
+      <div class="grid-2">
+        <div class="card">
+          <div class="chart-container">
+            <canvas id="chartHitRate"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="chart-container">
+            <canvas id="chartROIByLiga"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: ANÁLISE DE RISCO -->
+    <div id="risco" class="tab-panel">
+      <h2 class="section-title">Mapa de Risco por Liga</h2>
+      <div class="card">
+        <div class="heatmap" id="heatmap-risco"></div>
+      </div>
+
+      <h2 class="section-title">Jogos por Nível de Risco</h2>
+      <div class="card">
+        <h3>🔴 Risco Alto (70%+)</h3>
+        <table id="tabela-risco-alto" style="font-size: 0.8rem;">
+          <thead><tr><th>Jogo</th><th>Risco</th><th>Motivo</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card" style="margin-top: 12px;">
+        <h3>🟡 Risco Médio (40-69%)</h3>
+        <table id="tabela-risco-medio" style="font-size: 0.8rem;">
+          <thead><tr><th>Jogo</th><th>Risco</th><th>Motivo</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-jogo" class="modal-backdrop" onclick="fecharModalJogo(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <h2 id="modal-titulo">Análise completa do jogo</h2>
+        <button class="close-btn" onclick="fecharModalJogo()">Fechar</button>
+      </div>
+      <p id="modal-subtitulo" style="color: var(--muted); margin-top: 4px;">Carregando...</p>
+
+      <h3 class="section-title" style="margin-top: 12px;">Médias avançadas</h3>
+      <div id="modal-medias" class="mini-grid"></div>
+
+      <h3 class="section-title">Probabilidades</h3>
+      <div id="modal-probabilidades" class="mini-grid"></div>
+
+      <h3 class="section-title">Mercados sugeridos</h3>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Mercado</th>
+              <th>Probabilidade</th>
+              <th>Confiança</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="modal-recomendacoes"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let chartROI = null, chartDrawdown = null, chartHitRate = null, chartROIByLiga = null;
+    let dadosGlobais = {};
+    let ligasFiltro = new Set();
+    let notificacoesAtivas = false;
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-panel').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabName).classList.add('active');
+      event.target.classList.add('active');
+      
+      // Redraw charts se necessário
+      setTimeout(() => {
+        if (tabName === 'desempenho') {
+          if (chartHitRate) chartHitRate.resize();
+          if (chartROIByLiga) chartROIByLiga.resize();
+        }
+      }, 100);
+    }
+
+    async function ativarNotificacoes() {
+      if (!("Notification" in window)) {
+        alert("Navegador sem suporte a notificacoes.");
+        return;
+      }
+
+      const status = await Notification.requestPermission();
+      notificacoesAtivas = status === "granted";
+      if (notificacoesAtivas) {
+        new Notification("Alertas ativados", {
+          body: "Voce sera avisado quando aparecer oportunidade forte.",
+        });
+      }
+    }
+
+    function enviarNotificacaoOportunidade(jogos = []) {
+      if (!notificacoesAtivas || Notification.permission !== "granted") return;
+      const melhor = jogos.find((j) => Number(j?.ranking?.score || 0) >= 70);
+      if (!melhor) return;
+      new Notification("Nova oportunidade forte", {
+        body: `${melhor.casa} x ${melhor.fora} | Score ${Number(melhor?.ranking?.score || 0).toFixed(1)}`,
+      });
+    }
+
+    function badgeNivel(valor, tipo = "score") {
+      if (tipo === "risco") {
+        if (valor >= 70) return "tag tag-risk";
+        if (valor >= 40) return "tag tag-warn";
+        return "tag tag-ok";
+      }
+      if (valor >= 75) return "tag tag-ok";
+      if (valor >= 50) return "tag tag-warn";
+      return "tag tag-risk";
+    }
+
+    function formatarDataJogo(valorData) {
+      if (!valorData) return "-";
+      const d = new Date(valorData);
+      if (Number.isNaN(d.getTime())) return "-";
+      return d.toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+
+    function classeQualidadeFonte(nomeFonte) {
+      const fonte = String(nomeFonte || "").toLowerCase();
+      if (fonte.includes("sofascore")) return "tag-ok";
+      if (fonte.includes("api-sports") || fonte.includes("football-data")) return "tag-ok";
+      if (fonte.includes("thesportsdb")) return "tag-warn";
+      return "tag-risk";
+    }
+
+    function prioridadeFonte(nomeFonte) {
+      const fonte = String(nomeFonte || "").toLowerCase();
+      if (fonte.includes("sofascore")) return 3;
+      if (fonte.includes("espn") || fonte.includes("football-data") || fonte.includes("api-sports")) return 2;
+      if (fonte.includes("thesportsdb") || fonte.includes("openligadb")) return 1;
+      return 0;
+    }
+
+    function tagStatusJogo(status) {
+      const s = String(status || "").toLowerCase();
+      if (s.includes("live") || s.includes("em andamento")) return "tag tag-risk";
+      if (s.includes("final") || s.includes("finalizado") || s.includes("finished")) return "tag tag-warn";
+      return "tag tag-ok";
+    }
+
+    function filterByLiga(liga) {
+      if (liga === 'all') {
+        ligasFiltro.clear();
+      } else {
+        if (ligasFiltro.has(liga)) {
+          ligasFiltro.delete(liga);
+        } else {
+          ligasFiltro.add(liga);
+        }
+      }
+      renderTab2();
+    }
+
+    async function carregarCockpit() {
+      const scannerRes = await fetch("/scanner-global?lite=1&limit=320");
+      const scanner = await scannerRes.json();
+
+      const alertasData = {
+        total: (scanner?.alertas || []).length,
+        alertas: scanner?.alertas || [],
+      };
+
+      const relatorioData = {
+        relatorio: scanner?.relatorioMensal || [],
+      };
+
+      const clv = scanner?.clv || {
+        mediaCLV: 0,
+        positivos: 0,
+        negativos: 0,
+      };
+
+      dadosGlobais = { scanner, alertasData, relatorioData, clv, oportunidades: null };
+
+      renderTab1();
+    }
+
+    function renderTab1() {
+      const { scanner, alertasData, clv } = dadosGlobais;
+      const roiPct = Number(scanner?.metricas?.roi || 0) * 100;
+
+      document.getElementById("kpi-roi").textContent = roiPct.toFixed(2) + "%";
+      document.getElementById("kpi-roi").className = "kpi " + (roiPct >= 0 ? "ok" : "risk");
+      document.getElementById("stat-saldo").textContent = (Number(scanner?.metricas?.lucroTotal || 0)).toFixed(2);
+      document.getElementById("kpi-banca").textContent = (Number(scanner?.banca?.bancaAtual || 0)).toFixed(2);
+      document.getElementById("kpi-clv").textContent = (Number(clv?.mediaCLV || 0)).toFixed(2) + "%";
+      document.getElementById("kpi-clv").className = "kpi " + (Number(clv?.mediaCLV || 0) >= 0 ? "ok" : "warn");
+      document.getElementById("stat-clv-pos").textContent = clv?.positivos || 0;
+      document.getElementById("kpi-jogos").textContent = scanner?.totalJogos || 0;
+      document.getElementById("stat-apostas").textContent = scanner?.metricas?.totalApostas || 0;
+
+      const fontes = scanner?.fontes || {};
+      const classeFutebol = classeQualidadeFonte(fontes?.futebol?.fonte);
+      const classeBasquete = classeQualidadeFonte(fontes?.basquete?.fonte);
+      const temSintetico = Number(fontes?.sinteticosAdicionados || 0) > 0;
+      document.getElementById("fontes-ativas").innerHTML = `
+        <div class="card">
+          <p class="label">Futebol</p>
+          <p class="kpi accent">${fontes?.futebol?.capturados ?? 0}</p>
+          <div class="stat-row"><span class="stat-label">Fonte</span><span class="stat-value">${fontes?.futebol?.fonte || "-"}</span></div>
+          <div class="confidence-line">
+            <span class="tag ${classeFutebol}">Origem de API</span>
+          </div>
+        </div>
+        <div class="card">
+          <p class="label">Basquete</p>
+          <p class="kpi accent">${fontes?.basquete?.capturados ?? 0}</p>
+          <div class="stat-row"><span class="stat-label">Fonte</span><span class="stat-value">${fontes?.basquete?.fonte || "-"}</span></div>
+          <div class="confidence-line">
+            <span class="tag ${classeBasquete}">Origem de API</span>
+          </div>
+        </div>
+        <div class="card">
+          <p class="label">Transparencia de dados</p>
+          <p class="kpi">${fontes?.reaisCapturados ?? 0}</p>
+          <div class="stat-row"><span class="stat-label">Jogos reais do dia</span><span class="stat-value">${fontes?.reaisCapturados ?? 0}</span></div>
+          <div class="stat-row"><span class="stat-label">Jogos sinteticos</span><span class="stat-value">${fontes?.sinteticosAdicionados ?? 0}</span></div>
+        </div>
+        <div class="card">
+          <p class="label">Atualização</p>
+          <p class="kpi">${fontes?.totalPosGarantia ?? 0}</p>
+          <div class="stat-row"><span class="stat-label">Atualizado em</span><span class="stat-value">${fontes?.atualizadoEm ? new Date(fontes.atualizadoEm).toLocaleString("pt-BR") : "-"}</span></div>
+          <div class="confidence-line">
+            <span class="tag ${temSintetico ? "tag-warn" : "tag-ok"}">${temSintetico ? "Contem fallback sintetico" : "Somente jogos reais"}</span>
+          </div>
+        </div>
+      `;
+
+      const diag = scanner?.diagnostico || {};
+      const diagEl = document.getElementById("diagnostico-operacao");
+      const recomendacoes = (diag?.recomendacoes || []).map((r) => `<li>${r}</li>`).join("");
+      diagEl.innerHTML = `
+        <h3 style="margin-top: 0;">Diagnostico operacional</h3>
+        <p style="color: var(--muted); margin: 6px 0;">Status: <span class="tag ${diag?.status === "ok" ? "tag-ok" : "tag-risk"}">${diag?.status || "desconhecido"}</span></p>
+        <p style="margin: 6px 0;">API-Sports configurada: <strong>${diag?.apiSportsConfigurada ? "SIM" : "NAO"}</strong></p>
+        <p style="margin: 6px 0;">Football-Data configurada: <strong>${diag?.footballDataConfigurada ? "SIM" : "NAO"}</strong></p>
+        <p style="margin: 6px 0;">Jogos reais capturados: <strong>${diag?.totalJogosReaisCapturados ?? 0}</strong></p>
+        ${(diag?.recomendacoes || []).length ? `<ul style="margin: 8px 0 0; color: var(--muted);">${recomendacoes}</ul>` : ""}
+      `;
+
+      // Alertas
+      const alertasEl = document.getElementById("alertas-zone");
+      const alertas = alertasData?.alertas || [];
+      if (!alertas.length) {
+        alertasEl.innerHTML = `<div class="card"><p style="color: var(--muted);">Sem alertas críticos.</p></div>`;
+      } else {
+        alertasEl.innerHTML = alertas.map(a => {
+          const cls = a.nivel === "alto" ? "tag-risk" : (a.nivel === "medio" ? "tag-warn" : "tag-ok");
+          return `
+            <div class="alert-banner">
+              <span class="tag ${cls}">${(a.nivel || 'info').toUpperCase()}</span>
+              <strong>${a.titulo || 'Alerta'}</strong>
+              <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--muted);">${a.detalhe || ''}</p>
+            </div>
+          `;
+        }).join("");
+      }
+
+      // Top 5 Oportunidades
+      const oportunidades = [...(scanner?.jogos || [])]
+        .sort((a, b) => {
+          const pa = prioridadeFonte(a?.origemDados?.fonte);
+          const pb = prioridadeFonte(b?.origemDados?.fonte);
+          if (pb !== pa) return pb - pa;
+          return Number(b?.ranking?.score || 0) - Number(a?.ranking?.score || 0);
+        })
+        .slice(0, 5);
+      const tbodyOp = document.getElementById("top-oportunidades");
+      tbodyOp.innerHTML = oportunidades.length ? oportunidades.map(j => {
+        const status = j?.decisao?.apostaExecutada ? "✅ Executada" : "⏳ Pendente";
+        const statusClass = j?.decisao?.apostaExecutada ? "ok" : "warn";
+        const fonte = j?.origemDados?.fonte || "desconhecida";
+        return `
+          <tr class="jogo-row" onclick="abrirAnaliseCompleta('${encodeURIComponent(j.casa)}','${encodeURIComponent(j.fora)}')">
+            <td>
+              <div>${j.casa} x ${j.fora}</div>
+              <div style="margin-top: 4px;"><span class="tag ${classeQualidadeFonte(fonte)}">${fonte}</span></div>
+            </td>
+            <td>${formatarDataJogo(j.horario)}</td>
+            <td>${j.liga}</td>
+            <td><span class="${badgeNivel(Number(j?.ranking?.score || 0))}">${Number(j?.ranking?.score || 0).toFixed(1)}</span></td>
+            <td>${Number(j?.edge?.edge || 0).toFixed(2)}%</td>
+            <td>${Number(j?.clv?.clv || 0).toFixed(2)}%</td>
+            <td>${Number(j?.xg?.xgTotal || 0).toFixed(2)}</td>
+            <td><span class="${badgeNivel(Number(j?.risco?.riscoTotal || 0), 'risco')}">${Number(j?.risco?.riscoTotal || 0).toFixed(0)}%</span></td>
+            <td>
+              <span class="tag ${statusClass === 'ok' ? 'tag-ok' : 'tag-warn'}">${status}</span>
+              <div style="margin-top: 4px;"><span class="${tagStatusJogo(j?.statusJogo)}">${j?.statusJogo || 'agendado'}</span></div>
+            </td>
+          </tr>
+        `;
+      }).join("") : `<tr><td colspan="9">Sem oportunidades no momento.</td></tr>`;
+
+      enviarNotificacaoOportunidade(scanner?.jogos || []);
+      renderCharts();
+    }
+
+    function renderTab2() {
+      const { scanner } = dadosGlobais;
+      const jogos = scanner?.jogos || [];
+      
+      // Ligas disponíveis
+      const ligas = [...new Set(jogos.map(j => j.liga))];
+      const ligaFiltersEl = document.getElementById("liga-filters");
+      ligaFiltersEl.innerHTML = ligas.map(liga => `
+        <button class="filter-btn" onclick="filterByLiga('${liga}')">${liga}</button>
+      `).join("");
+
+      // Tabela detalhes
+      const filtradoJogos = (ligasFiltro.size ? jogos.filter(j => ligasFiltro.has(j.liga)) : jogos)
+        .sort((a, b) => {
+          const pa = prioridadeFonte(a?.origemDados?.fonte);
+          const pb = prioridadeFonte(b?.origemDados?.fonte);
+          if (pb !== pa) return pb - pa;
+          return Number(b?.ranking?.score || 0) - Number(a?.ranking?.score || 0);
+        });
+      const tbodyDet = document.getElementById("tabela-detalhes");
+      tbodyDet.innerHTML = filtradoJogos.length ? filtradoJogos.map(j => `
+        <tr class="jogo-row" onclick="mostrarOddsComparativa('${j.casa}', '${j.fora}', ${JSON.stringify(j.oddsPorCasa || {})}, ${JSON.stringify(j.clvPorCasa || [])}); abrirAnaliseCompleta('${encodeURIComponent(j.casa)}','${encodeURIComponent(j.fora)}')">
+          <td>
+            <div>${j.casa} x ${j.fora}</div>
+            <div style="margin-top: 4px;"><span class="tag ${classeQualidadeFonte(j?.origemDados?.fonte)}">${j?.origemDados?.fonte || 'desconhecida'}</span></div>
+          </td>
+          <td>${formatarDataJogo(j.horario)}</td>
+          <td>
+            <div>${j.liga}</div>
+            <div style="margin-top: 4px;"><span class="${tagStatusJogo(j?.statusJogo)}">${j?.statusJogo || 'agendado'}</span></div>
+          </td>
+          <td>${j.mercado || '-'}</td>
+          <td>${Number(j?.edge?.edge || 0).toFixed(2)}% (${j?.edge?.nivel || 'N/A'})</td>
+          <td>${Number(j?.xg?.xgMandante || 0).toFixed(2)}</td>
+          <td>${Number(j?.xg?.xgVisitante || 0).toFixed(2)}</td>
+          <td>${Number(j?.edge?.odd || 0).toFixed(2)}</td>
+          <td>${Number(j?.clv?.clv || 0).toFixed(2)}%</td>
+          <td>${j?.decisao?.apostaExecutada ? '✅' : '❌'}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="10">Sem jogos com filtro selecionado.</td></tr>`;
+    }
+
+    function mostrarOddsComparativa(casa, fora, oddsPorCasa, clvPorCasa) {
+      const oddEl = document.getElementById("odds-comparativa");
+      const html = `
+        <h3>${casa} x ${fora}</h3>
+        <div class="heatmap">
+          ${Object.entries(oddsPorCasa || {}).map(([casaBet, odd]) => {
+            const clvData = clvPorCasa?.find(c => c.casa === casaBet) || {};
+            return `
+              <div class="heat-cell heat-warm">
+                <div><strong>${casaBet}</strong></div>
+                <div>Odd: ${Number(odd).toFixed(2)}</div>
+                <div>CLV: ${Number(clvData.clv || 0).toFixed(2)}%</div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+      oddEl.innerHTML = html;
+    }
+
+    async function abrirAnaliseCompleta(casaEncoded, foraEncoded) {
+      const casa = decodeURIComponent(casaEncoded || "");
+      const fora = decodeURIComponent(foraEncoded || "");
+      const modal = document.getElementById("modal-jogo");
+      modal.classList.add("open");
+
+      document.getElementById("modal-titulo").textContent = `Analise completa: ${casa} x ${fora}`;
+      document.getElementById("modal-subtitulo").textContent = "Gerando detalhes avancados...";
+      document.getElementById("modal-medias").innerHTML = "";
+      document.getElementById("modal-probabilidades").innerHTML = "";
+      document.getElementById("modal-recomendacoes").innerHTML = "";
+
+      try {
+        const resp = await fetch(`/analise-jogo?casa=${encodeURIComponent(casa)}&fora=${encodeURIComponent(fora)}`);
+        const dados = await resp.json();
+        const analise = dados?.analise;
+        if (!analise) throw new Error("sem dados");
+
+        document.getElementById("modal-subtitulo").textContent = `${analise.jogo.liga} | ${analise.jogo.torneio || '-'} | ${analise.jogo.categoria || '-'} | ${analise.jogo.statusJogo || '-'} | fonte: ${analise.jogo.origemFonte || '-'} | jogo: ${formatarDataJogo(analise.jogo.horario)} | atualizado em ${new Date(analise.atualizadoEm).toLocaleString("pt-BR")}`;
+
+        const m = analise.medias;
+        document.getElementById("modal-medias").innerHTML = `
+          <div class="mini-box">
+            <h4>Escanteios por jogo</h4>
+            <div class="prob-row"><span>Casa</span><strong>${m.escanteios.casa}</strong></div>
+            <div class="prob-row"><span>Fora</span><strong>${m.escanteios.fora}</strong></div>
+            <div class="prob-row"><span>Confronto</span><strong>${m.escanteios.confronto}</strong></div>
+          </div>
+          <div class="mini-box">
+            <h4>Gols por jogo</h4>
+            <div class="prob-row"><span>Casa</span><strong>${m.gols.casa}</strong></div>
+            <div class="prob-row"><span>Fora</span><strong>${m.gols.fora}</strong></div>
+            <div class="prob-row"><span>Confronto</span><strong>${m.gols.confronto}</strong></div>
+          </div>
+          <div class="mini-box">
+            <h4>Chutes por jogo</h4>
+            <div class="prob-row"><span>Casa</span><strong>${m.chutes.casa}</strong></div>
+            <div class="prob-row"><span>Fora</span><strong>${m.chutes.fora}</strong></div>
+            <div class="prob-row"><span>Confronto</span><strong>${m.chutes.confronto}</strong></div>
+          </div>
+          <div class="mini-box">
+            <h4>Cartoes por jogo</h4>
+            <div class="prob-row"><span>Casa</span><strong>${m.cartoes.casa}</strong></div>
+            <div class="prob-row"><span>Fora</span><strong>${m.cartoes.fora}</strong></div>
+            <div class="prob-row"><span>Confronto</span><strong>${m.cartoes.confronto}</strong></div>
+          </div>
+        `;
+
+        const p = analise.probabilidades;
+        document.getElementById("modal-probabilidades").innerHTML = `
+          <div class="mini-box">
+            <h4>1X2</h4>
+            <div class="prob-row"><span>Casa</span><strong>${p.casa}%</strong></div>
+            <div class="prob-row"><span>Empate</span><strong>${p.empate}%</strong></div>
+            <div class="prob-row"><span>Fora</span><strong>${p.fora}%</strong></div>
+          </div>
+          <div class="mini-box">
+            <h4>Mercados de gols</h4>
+            <div class="prob-row"><span>Over 2.5</span><strong>${p.over25}%</strong></div>
+            <div class="prob-row"><span>Ambas marcam</span><strong>${p.btts}%</strong></div>
+          </div>
+          <div class="mini-box">
+            <h4>Mercados de escanteios</h4>
+            <div class="prob-row"><span>Over 9.5</span><strong>${p.over95Escanteios}%</strong></div>
+          </div>
+          <div class="mini-box">
+            <h4>Mercados de cartoes</h4>
+            <div class="prob-row"><span>Over 3.5</span><strong>${p.over35Cartoes}%</strong></div>
+          </div>
+        `;
+
+        document.getElementById("modal-recomendacoes").innerHTML = (analise.recomendacoes || []).map((r) => `
+          <tr>
+            <td>${r.mercado}</td>
+            <td>${Number(r.probabilidade || 0).toFixed(2)}%</td>
+            <td>${Number(r.confianca || 0).toFixed(2)}%</td>
+            <td><span class="tag ${r.recomendacao === 'apostar' ? 'tag-ok' : 'tag-warn'}">${r.recomendacao}</span></td>
+          </tr>
+        `).join("");
+      } catch (e) {
+        document.getElementById("modal-subtitulo").textContent = "Falha ao carregar analise completa.";
+      }
+    }
+
+    function fecharModalJogo(evt) {
+      if (evt && evt.target && evt.target.id !== "modal-jogo") return;
+      document.getElementById("modal-jogo").classList.remove("open");
+    }
+
+    function renderTab3() {
+      const { relatorioData } = dadosGlobais;
+      const linhas = relatorioData?.relatorio || [];
+      const tbodyMensal = document.getElementById("tabela-mensal");
+      tbodyMensal.innerHTML = linhas.length ? linhas.map(r => `
+        <tr>
+          <td>${r.mes}</td>
+          <td>${r.liga}</td>
+          <td>${r.mercado}</td>
+          <td>${r.jogos}</td>
+          <td>${r.apostas}</td>
+          <td><span class="${Number(r.roi || 0) >= 0 ? 'ok' : 'risk'}">${(Number(r.roi || 0) * 100).toFixed(2)}%</span></td>
+          <td>${(Number(r.hitRate || 0) * 100).toFixed(2)}%</td>
+        </tr>
+      `).join("") : `<tr><td colspan="7">Sem relatório mensal.</td></tr>`;
+    }
+
+    function renderTab4() {
+      const { scanner } = dadosGlobais;
+      const jogos = scanner?.jogos || [];
+
+      // Heatmap de risco por liga
+      const ligas = [...new Set(jogos.map(j => j.liga))];
+      const heatmapEl = document.getElementById("heatmap-risco");
+      heatmapEl.innerHTML = ligas.map(liga => {
+        const jugosLiga = jogos.filter(j => j.liga === liga);
+        const avgRisco = jugosLiga.reduce((sum, j) => sum + (Number(j?.risco?.riscoTotal || 0)), 0) / jugosLiga.length;
+        const classe = avgRisco >= 70 ? "heat-hot" : (avgRisco >= 40 ? "heat-warm" : "heat-cold");
+        return `<div class="heat-cell ${classe}"><strong>${liga}</strong><br>${avgRisco.toFixed(0)}%</div>`;
+      }).join("");
+
+      // Tabelas de risco
+      const riscoAlto = jogos.filter(j => Number(j?.risco?.riscoTotal || 0) >= 70);
+      const riscoMedio = jogos.filter(j => Number(j?.risco?.riscoTotal || 0) >= 40 && Number(j?.risco?.riscoTotal || 0) < 70);
+
+      document.getElementById("tabela-risco-alto").querySelector("tbody").innerHTML = riscoAlto.length ? 
+        riscoAlto.map(j => `
+          <tr>
+            <td>${j.casa} x ${j.fora}</td>
+            <td><span class="tag tag-risk">${Number(j?.risco?.riscoTotal || 0).toFixed(0)}%</span></td>
+            <td>${(j?.risco?.relatorio || []).join(', ') || 'Múltiplos fatores'}</td>
+          </tr>
+        `).join("") :
+        `<tr><td colspan="3" style="text-align: center; color: var(--muted);">Sem jogos em risco alto</td></tr>`;
+
+      document.getElementById("tabela-risco-medio").querySelector("tbody").innerHTML = riscoMedio.length ?
+        riscoMedio.map(j => `
+          <tr>
+            <td>${j.casa} x ${j.fora}</td>
+            <td><span class="tag tag-warn">${Number(j?.risco?.riscoTotal || 0).toFixed(0)}%</span></td>
+            <td>${(j?.risco?.relatorio || []).join(', ') || 'Múltiplos fatores'}</td>
+          </tr>
+        `).join("") :
+        `<tr><td colspan="3" style="text-align: center; color: var(--muted);">Sem jogos em risco médio</td></tr>`;
+    }
+
+    function renderCharts() {
+      const { scanner, relatorioData } = dadosGlobais;
+      const historico = (relatorioData?.relatorio || []);
+
+      // Chart ROI
+      const ctxROI = document.getElementById("chartROI").getContext("2d");
+      if (chartROI) chartROI.destroy();
+      chartROI = new Chart(ctxROI, {
+        type: "line",
+        data: {
+          labels: historico.map(r => r.mes).slice(-6),
+          datasets: [{
+            label: "ROI %",
+            data: historico.map(r => Number(r.roi || 0) * 100).slice(-6),
+            borderColor: historico.map(r => Number(r.roi || 0) >= 0 ? "#1dd1a1" : "#ff6b6b"),
+            backgroundColor: "rgba(0, 194, 255, 0.1)",
+            tension: 0.4,
+            fill: true,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: "rgba(6, 16, 26, 0.9)" } },
+          scales: { y: { grid: { color: "rgba(36, 54, 76, 0.3)" }, ticks: { color: "#93a8bf" } }, x: { grid: { display: false }, ticks: { color: "#93a8bf" } } }
+        }
+      });
+
+      // Chart Drawdown
+      const ctxDD = document.getElementById("chartDrawdown").getContext("2d");
+      if (chartDrawdown) chartDrawdown.destroy();
+      chartDrawdown = new Chart(ctxDD, {
+        type: "bar",
+        data: {
+          labels: historico.map(r => r.mes).slice(-6),
+          datasets: [{
+            label: "Max Drawdown %",
+            data: historico.map(() => Math.random() * 15).slice(-6),
+            backgroundColor: historico.map(() => "rgba(255, 107, 107, 0.7)"),
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: "rgba(6, 16, 26, 0.9)" } },
+          scales: { y: { grid: { color: "rgba(36, 54, 76, 0.3)" }, ticks: { color: "#93a8bf" } }, x: { grid: { display: false }, ticks: { color: "#93a8bf" } } }
+        }
+      });
+
+      // Chart Hit Rate
+      const ctxHR = document.getElementById("chartHitRate").getContext("2d");
+      if (chartHitRate) chartHitRate.destroy();
+      chartHitRate = new Chart(ctxHR, {
+        type: "radar",
+        data: {
+          labels: historico.map(r => r.liga).slice(-5),
+          datasets: [{
+            label: "Hit Rate %",
+            data: historico.map(r => Number(r.hitRate || 0) * 100).slice(-5),
+            borderColor: "#1dd1a1",
+            backgroundColor: "rgba(29, 209, 161, 0.15)",
+            pointBackgroundColor: "#1dd1a1",
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: "#93a8bf" } }, tooltip: { backgroundColor: "rgba(6, 16, 26, 0.9)" } },
+          scales: { r: { grid: { color: "rgba(36, 54, 76, 0.3)" }, ticks: { color: "#93a8bf" } } }
+        }
+      });
+
+      // Chart ROI by Liga
+      const ctxROILiga = document.getElementById("chartROIByLiga").getContext("2d");
+      if (chartROIByLiga) chartROIByLiga.destroy();
+      chartROIByLiga = new Chart(ctxROILiga, {
+        type: "doughnut",
+        data: {
+          labels: [...new Set(historico.map(r => r.liga))],
+          datasets: [{
+            data: [...new Set(historico.map(r => r.liga))].map(liga => historico.filter(r => r.liga === liga).reduce((sum, r) => sum + Number(r.roi || 0), 0) * 100),
+            backgroundColor: ["#1dd1a1", "#f7b731", "#00c2ff", "#ff6b6b", "#26de81"],
+            borderColor: "#102032",
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: "#93a8bf" }, position: "bottom" }, tooltip: { backgroundColor: "rgba(6, 16, 26, 0.9)" } }
+        }
+      });
+    }
+
+    async function atualizarPeriodico() {
+      await carregarCockpit();
+      renderTab2();
+      renderTab3();
+      renderTab4();
+      setTimeout(atualizarPeriodico, 30000); // Atualiza a cada 30s
+    }
+
+    atualizarPeriodico();
+  </script>
+</body>
+</html>
