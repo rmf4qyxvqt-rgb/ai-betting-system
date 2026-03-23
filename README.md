@@ -1,16 +1,42 @@
-# AI Sports Analytics MVP
+# 🎯 AI Betting System - Control Room
 
-Projeto reiniciado em modo MVP enxuto.
+Sistema profissional de análise de apostas com comparação IA vs Casa, edge tracking e decisões operacionais.
 
-Objetivo: mostrar jogos reais do dia (futebol e basquete) e gerar predições EV automaticamente.
+![Status](https://img.shields.io/badge/status-production%20ready-brightgreen)
+![Next.js](https://img.shields.io/badge/frontend-Next.js%2014-black)
+![FastAPI](https://img.shields.io/badge/backend-FastAPI-009688)
 
-## Estrutura
+---
+
+## 🚀 DEPLOY RÁPIDO (2 CLIQUES)
+
+### ⚡ **Deploy Automático**
+
+👉 **[CLIQUE AQUI para Deploy](./DEPLOY_GUIA.md)** ← Instruções completas
+
+Ou siga diretamente:
+
+1. **Frontend (Vercel):**
+   ```
+   https://vercel.com/new/clone?repository-url=https://github.com/rmf4qyxvqt-rgb/ai-betting-system&rootDirectory=frontend
+   ```
+
+2. **Backend (Railway):**
+   ```
+   https://railway.app/new?repo=https://github.com/rmf4qyxvqt-rgb/ai-betting-system
+   ```
+
+---
+
+## 📁 Estrutura
 
 ```text
 ai-betting-system/
-  backend/
-  frontend/
-  database/
+  ├── frontend/          (Next.js 14 - Dashboard profissional)
+  ├── backend/           (FastAPI - Motor de análises)
+  ├── database/          (SQLite - Persistência local)
+  ├── analytics/         (Engines de análise)
+  └── DEPLOY_GUIA.md    (📋 Leia primeiro!)
 ```
 
 ## Backend (FastAPI)
