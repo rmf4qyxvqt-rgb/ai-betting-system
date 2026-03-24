@@ -257,6 +257,30 @@
       color: var(--txt);
     }
 
+    .sport-filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .sport-btn {
+      border: 1px solid var(--line);
+      background: rgba(16, 32, 50, 0.8);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .sport-btn.active {
+      color: var(--bg-1);
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
     .loading {
       text-align: center;
       padding: 20px;
@@ -318,6 +342,11 @@
     <div id="tab-oportunidades" class="tab-content">
       <div class="card">
         <div class="card-title">🎯 Oportunidades Próximas</div>
+        <div class="sport-filters" id="sport-filters">
+          <button class="sport-btn" data-sport="todos" onclick="setSportFilter('todos', this)">Todos</button>
+          <button class="sport-btn active" data-sport="futebol" onclick="setSportFilter('futebol', this)">Futebol</button>
+          <button class="sport-btn" data-sport="basquete" onclick="setSportFilter('basquete', this)">Basquete</button>
+        </div>
         <div id="lista-oportunidades" class="loading">
           <div class="spinner"></div> Carregando...
         </div>
@@ -358,6 +387,7 @@
     }
 
     let dadosCache = {};
+    let filtroEsporte = 'futebol';
 
     function switchTabMobile(tabName, clickedButton) {
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -366,6 +396,15 @@
       if (clickedButton) {
         clickedButton.classList.add('active');
       }
+    }
+
+    function setSportFilter(tipo, clickedButton) {
+      filtroEsporte = tipo;
+      document.querySelectorAll('.sport-btn').forEach(b => b.classList.remove('active'));
+      if (clickedButton) {
+        clickedButton.classList.add('active');
+      }
+      renderTab2Mobile();
     }
 
     async function refreshDados(triggerButton) {
@@ -481,16 +520,33 @@
       const oportunidades = (dadosCache.scanner?.jogos || []).length
         ? (dadosCache.scanner?.jogos || [])
         : (dadosCache.oportunidades?.oportunidades || []);
-      const futebol = (dadosCache.scanner?.jogosFutebol || dadosCache.oportunidades?.futebol || []).slice(0, 120);
-      const basquete = (dadosCache.scanner?.jogosBasquete || dadosCache.oportunidades?.basquete || []).slice(0, 120);
+      const ordenarPorHorario = (lista) => [...(lista || [])].sort((a, b) => {
+        const ta = new Date(a?.horario || 0).getTime();
+        const tb = new Date(b?.horario || 0).getTime();
+        return ta - tb;
+      });
+
+      const futebol = ordenarPorHorario(dadosCache.scanner?.jogosFutebol || dadosCache.oportunidades?.futebol || []);
+      const basquete = ordenarPorHorario(dadosCache.scanner?.jogosBasquete || dadosCache.oportunidades?.basquete || []);
       const alvoData = dadosCache.scanner?.alvoData || dadosCache.oportunidades?.alvoData || '';
       const container = document.getElementById('lista-oportunidades');
+
+      const formatarHora = (iso) => {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '--:--';
+        return d.toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+          timeZone: 'America/Sao_Paulo'
+        });
+      };
 
       const renderLista = (lista) => lista.map(j => `
         <div class="jogo-item">
           <div class="jogo-header">
             <div class="jogo-nome">${j.casa} x ${j.fora}</div>
-            <strong class="ok">${Number(j?.ranking?.score || 0).toFixed(1)}</strong>
+            <strong class="accent">${formatarHora(j?.horario)}</strong>
           </div>
           <div class="jogo-stats">
             <div class="stat-item">Liga: <strong>${j.liga}</strong></div>
@@ -499,13 +555,24 @@
           </div>
         </div>
       `).join('');
+
+      let conteudo = '';
+      if (filtroEsporte === 'futebol') {
+        conteudo = futebol.length ? renderLista(futebol) : '<p style="color: var(--muted); text-align: center;">Sem jogos de futebol</p>';
+      } else if (filtroEsporte === 'basquete') {
+        conteudo = basquete.length ? renderLista(basquete) : '<p style="color: var(--muted); text-align: center;">Sem jogos de basquete</p>';
+      } else {
+        conteudo = `
+          <div class="card-title" style="margin-bottom: 8px;">⚽ Futebol (${futebol.length})</div>
+          ${futebol.length ? renderLista(futebol) : '<p style="color: var(--muted); text-align: center;">Sem jogos de futebol</p>'}
+          <div class="card-title" style="margin: 14px 0 8px;">🏀 Basquete (${basquete.length})</div>
+          ${basquete.length ? renderLista(basquete) : '<p style="color: var(--muted); text-align: center;">Sem jogos de basquete</p>'}
+        `;
+      }
       
       container.innerHTML = oportunidades.length ? `
-        <div style="margin-bottom: 10px; color: var(--muted); font-size: 0.8rem;">Data alvo: <strong style="color: var(--txt);">${alvoData || 'amanha'}</strong></div>
-        <div class="card-title" style="margin-bottom: 8px;">⚽ Futebol (${futebol.length})</div>
-        ${futebol.length ? renderLista(futebol) : '<p style="color: var(--muted); text-align: center;">Sem jogos de futebol</p>'}
-        <div class="card-title" style="margin: 14px 0 8px;">🏀 Basquete (${basquete.length})</div>
-        ${basquete.length ? renderLista(basquete) : '<p style="color: var(--muted); text-align: center;">Sem jogos de basquete</p>'}
+        <div style="margin-bottom: 10px; color: var(--muted); font-size: 0.8rem;">Data alvo: <strong style="color: var(--txt);">${alvoData || 'amanha'}</strong> | Ordenado por horário</div>
+        ${conteudo}
       ` : '<p style="color: var(--muted); text-align: center;">Sem oportunidades</p>';
     }
 
