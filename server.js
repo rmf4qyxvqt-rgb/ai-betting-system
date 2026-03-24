@@ -311,25 +311,36 @@ async function obterFallbackJogosReais(limit = 40) {
     .sort((a, b) => Number(b?.ranking?.score || 0) - Number(a?.ranking?.score || 0))
     .slice(0, Math.max(10, Number(limit || 40)));
 
+  const jogosPersistidos = obterJogosPersistidos();
+  const jogosPersistidosValidos = Array.isArray(jogosPersistidos)
+    ? jogosPersistidos.filter((j) => j?.casa && j?.fora && j?.liga)
+    : [];
+
+  const jogosBase = jogosUnicos.length > 0 ? jogosUnicos : jogosPersistidosValidos.slice(0, Math.max(10, Number(limit || 40)));
+
   return {
     status: "parcial",
     mensagem: "Fallback online aplicado por indisponibilidade do scanner principal.",
-    totalJogos: jogosUnicos.length,
+    totalJogos: jogosBase.length,
     fontes: {
-      futebol: { fonte: "TheSportsDB", capturados: jogosUnicos.filter((j) => j.esporte === "futebol").length },
-      basquete: { fonte: "TheSportsDB", capturados: jogosUnicos.filter((j) => j.esporte === "basquete").length },
+      futebol: { fonte: jogosUnicos.length > 0 ? "Fontes Publicas" : "Snapshot Persistido", capturados: jogosBase.filter((j) => j.esporte === "futebol").length },
+      basquete: { fonte: jogosUnicos.length > 0 ? "Fontes Publicas" : "Snapshot Persistido", capturados: jogosBase.filter((j) => j.esporte === "basquete").length },
       totalBruto: jogos.length,
-      totalPosFiltro: jogosUnicos.length,
-      totalPosGarantia: jogosUnicos.length,
-      reaisCapturados: jogosUnicos.length,
+      totalPosFiltro: jogosBase.length,
+      totalPosGarantia: jogosBase.length,
+      reaisCapturados: jogosBase.length,
       sinteticosAdicionados: 0,
       atualizadoEm: new Date().toISOString(),
     },
     diagnostico: {
-      status: jogosUnicos.length > 0 ? "ok_fallback" : "sem_jogos_reais",
-      recomendacoes: jogosUnicos.length > 0 ? ["Operando em fallback online devido a falha de persistencia no scanner principal."] : ["Sem jogos retornados pela fonte publica nesta janela."],
+      status: jogosBase.length > 0 ? (jogosUnicos.length > 0 ? "ok_fallback" : "ok_snapshot") : "sem_jogos_reais",
+      recomendacoes: jogosBase.length > 0
+        ? [jogosUnicos.length > 0
+            ? "Operando em fallback online devido a falha de persistencia no scanner principal."
+            : "Operando com snapshot persistido por indisponibilidade temporaria das APIs externas."]
+        : ["Sem jogos retornados pela fonte publica nesta janela."],
     },
-    jogos: jogosUnicos,
+    jogos: jogosBase,
     metricas: {
       roi: 0,
     },
@@ -339,7 +350,7 @@ async function obterFallbackJogosReais(limit = 40) {
     backtest: { retornoPct: 0, maxDrawdown: 0, pontosCurva: [] },
     relatorioMensal: [],
     banca: carregarBanca(),
-    total: jogosUnicos.length,
+    total: jogosBase.length,
   };
 }
 
