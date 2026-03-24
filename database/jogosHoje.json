@@ -1,0 +1,626 @@
+[
+  {
+    "esporte": "futebol",
+    "mercado": "mercado_futebol",
+    "liga": "ESPN",
+    "casa": "Palmeiras",
+    "fora": "Grêmio",
+    "horario": "2026-04-03T00:30Z",
+    "risco": {
+      "riscoTotal": 46,
+      "nivel": "MODERADO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 1.91,
+      "odd": 2.97,
+      "probReal": 52.45,
+      "probCasa": 33.32,
+      "nivel": "EDGE BOM"
+    },
+    "xg": {
+      "xgTotal": 1.64,
+      "xgMandante": 0.85,
+      "xgVisitante": 0.79
+    },
+    "clv": {
+      "clv": 0.58,
+      "oddEntrada": 1.73,
+      "oddFechamento": 2.13
+    },
+    "ranking": {
+      "score": 89.15,
+      "classe": "QUENTE"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "ESPN"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 2,
+        "sofre_media": 1.89
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  },
+  {
+    "esporte": "futebol",
+    "mercado": "mercado_futebol",
+    "liga": "Australian A-League",
+    "casa": "Melbourne Victory",
+    "fora": "Western Sydney Wanderers FC",
+    "horario": "2014-10-10T09:40:00",
+    "risco": {
+      "riscoTotal": 28,
+      "nivel": "MODERADO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 3.52,
+      "odd": 2.26,
+      "probReal": 35.6,
+      "probCasa": 32.47,
+      "nivel": "EDGE BOM"
+    },
+    "xg": {
+      "xgTotal": 2.99,
+      "xgMandante": 1.55,
+      "xgVisitante": 1.44
+    },
+    "clv": {
+      "clv": 2.6,
+      "oddEntrada": 2.25,
+      "oddFechamento": 2.71
+    },
+    "ranking": {
+      "score": 86.76,
+      "classe": "QUENTE"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "TheSportsDB"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 2.14,
+        "sofre_media": 1.39
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  },
+  {
+    "esporte": "basquete",
+    "mercado": "mercado_basquete",
+    "liga": "Australian A-League",
+    "casa": "Melbourne Victory",
+    "fora": "Western Sydney Wanderers FC",
+    "horario": "2014-10-10T09:40:00",
+    "risco": {
+      "riscoTotal": 28,
+      "nivel": "MODERADO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 3.52,
+      "odd": 2.26,
+      "probReal": 35.6,
+      "probCasa": 32.47,
+      "nivel": "EDGE BOM"
+    },
+    "xg": {
+      "xgTotal": 2.99,
+      "xgMandante": 1.55,
+      "xgVisitante": 1.44
+    },
+    "clv": {
+      "clv": 2.6,
+      "oddEntrada": 2.25,
+      "oddFechamento": 2.71
+    },
+    "ranking": {
+      "score": 86.76,
+      "classe": "QUENTE"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "TheSportsDB"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 2.14,
+        "sofre_media": 1.39
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  },
+  {
+    "esporte": "futebol",
+    "mercado": "mercado_futebol",
+    "liga": "ESPN",
+    "casa": "Bahia",
+    "fora": "Athletico-PR",
+    "horario": "2026-04-01T23:00Z",
+    "risco": {
+      "riscoTotal": 55,
+      "nivel": "MODERADO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 3.03,
+      "odd": 3.04,
+      "probReal": 58.29,
+      "probCasa": 37.54,
+      "nivel": "EDGE BOM"
+    },
+    "xg": {
+      "xgTotal": 1.45,
+      "xgMandante": 0.75,
+      "xgVisitante": 0.7
+    },
+    "clv": {
+      "clv": -0.22,
+      "oddEntrada": 1.7,
+      "oddFechamento": 1.95
+    },
+    "ranking": {
+      "score": 84.15,
+      "classe": "QUENTE"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "ESPN"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 1.81,
+        "sofre_media": 1.89
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  },
+  {
+    "esporte": "futebol",
+    "mercado": "mercado_futebol",
+    "liga": "ESPN",
+    "casa": "Chapecoense",
+    "fora": "Atlético-MG",
+    "horario": "2026-04-02T22:00Z",
+    "risco": {
+      "riscoTotal": 57,
+      "nivel": "MODERADO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 3.53,
+      "odd": 3.05,
+      "probReal": 60.04,
+      "probCasa": 39.19,
+      "nivel": "EDGE BOM"
+    },
+    "xg": {
+      "xgTotal": 1.41,
+      "xgMandante": 0.73,
+      "xgVisitante": 0.68
+    },
+    "clv": {
+      "clv": -0.47,
+      "oddEntrada": 1.7,
+      "oddFechamento": 1.89
+    },
+    "ranking": {
+      "score": 82.08,
+      "classe": "QUENTE"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "ESPN"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 1.74,
+        "sofre_media": 1.88
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  },
+  {
+    "esporte": "futebol",
+    "mercado": "mercado_futebol",
+    "liga": "ESPN",
+    "casa": "Internacional",
+    "fora": "São Paulo",
+    "horario": "2026-04-01T22:30Z",
+    "risco": {
+      "riscoTotal": 60,
+      "nivel": "MODERADO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 4.15,
+      "odd": 3.05,
+      "probReal": 61.83,
+      "probCasa": 41.12,
+      "nivel": "EDGE BOM"
+    },
+    "xg": {
+      "xgTotal": 1.4,
+      "xgMandante": 0.73,
+      "xgVisitante": 0.67
+    },
+    "clv": {
+      "clv": -0.72,
+      "oddEntrada": 1.72,
+      "oddFechamento": 1.84
+    },
+    "ranking": {
+      "score": 79.59,
+      "classe": "QUENTE"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "ESPN"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 1.66,
+        "sofre_media": 1.85
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  },
+  {
+    "esporte": "futebol",
+    "mercado": "mercado_futebol",
+    "liga": "ESPN",
+    "casa": "Fluminense",
+    "fora": "Corinthians",
+    "horario": "2026-04-02T00:30Z",
+    "risco": {
+      "riscoTotal": 63,
+      "nivel": "MODERADO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 4.76,
+      "odd": 3.03,
+      "probReal": 63.29,
+      "probCasa": 42.95,
+      "nivel": "EDGE BOM"
+    },
+    "xg": {
+      "xgTotal": 1.41,
+      "xgMandante": 0.73,
+      "xgVisitante": 0.68
+    },
+    "clv": {
+      "clv": -0.94,
+      "oddEntrada": 1.74,
+      "oddFechamento": 1.8
+    },
+    "ranking": {
+      "score": 77.2,
+      "classe": "QUENTE"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "ESPN"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 1.58,
+        "sofre_media": 1.82
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  },
+  {
+    "esporte": "futebol",
+    "mercado": "mercado_futebol",
+    "liga": "ESPN",
+    "casa": "Athletico-PR",
+    "fora": "Botafogo",
+    "horario": "2026-03-29T21:30Z",
+    "risco": {
+      "riscoTotal": 30,
+      "nivel": "MODERADO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 6.65,
+      "odd": 1.89,
+      "probReal": 34.18,
+      "probCasa": 39.41,
+      "nivel": "EDGE BOM"
+    },
+    "xg": {
+      "xgTotal": 3.6,
+      "xgMandante": 1.87,
+      "xgVisitante": 1.73
+    },
+    "clv": {
+      "clv": 2.61,
+      "oddEntrada": 2.55,
+      "oddFechamento": 2.8
+    },
+    "ranking": {
+      "score": 76.14,
+      "classe": "QUENTE"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "ESPN"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 1.9,
+        "sofre_media": 1.05
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  },
+  {
+    "esporte": "futebol",
+    "mercado": "mercado_futebol",
+    "liga": "ESPN",
+    "casa": "Santos",
+    "fora": "Remo",
+    "horario": "2026-04-02T22:00Z",
+    "risco": {
+      "riscoTotal": 34,
+      "nivel": "MODERADO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 8.54,
+      "odd": 1.75,
+      "probReal": 35.78,
+      "probCasa": 44.26,
+      "nivel": "EDGE ALTO"
+    },
+    "xg": {
+      "xgTotal": 3.8,
+      "xgMandante": 1.98,
+      "xgVisitante": 1.82
+    },
+    "clv": {
+      "clv": 2.3,
+      "oddEntrada": 2.68,
+      "oddFechamento": 2.77
+    },
+    "ranking": {
+      "score": 69.29,
+      "classe": "NEUTRA"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "ESPN"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 1.71,
+        "sofre_media": 0.89
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  },
+  {
+    "esporte": "futebol",
+    "mercado": "mercado_futebol",
+    "liga": "ESPN",
+    "casa": "Cruzeiro",
+    "fora": "Vitória",
+    "horario": "2026-04-01T23:00Z",
+    "risco": {
+      "riscoTotal": 37,
+      "nivel": "MODERADO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 9.56,
+      "odd": 1.7,
+      "probReal": 37.35,
+      "probCasa": 47.09,
+      "nivel": "EDGE ALTO"
+    },
+    "xg": {
+      "xgTotal": 3.87,
+      "xgMandante": 2.01,
+      "xgVisitante": 1.86
+    },
+    "clv": {
+      "clv": 2.05,
+      "oddEntrada": 2.73,
+      "oddFechamento": 2.73
+    },
+    "ranking": {
+      "score": 65.42,
+      "classe": "NEUTRA"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "ESPN"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 1.6,
+        "sofre_media": 0.82
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  },
+  {
+    "esporte": "futebol",
+    "mercado": "mercado_futebol",
+    "liga": "ESPN",
+    "casa": "Botafogo",
+    "fora": "Mirassol",
+    "horario": "2026-04-01T22:30Z",
+    "risco": {
+      "riscoTotal": 37,
+      "nivel": "MODERADO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 9.57,
+      "odd": 1.69,
+      "probReal": 37.37,
+      "probCasa": 47.12,
+      "nivel": "EDGE ALTO"
+    },
+    "xg": {
+      "xgTotal": 3.87,
+      "xgMandante": 2.01,
+      "xgVisitante": 1.86
+    },
+    "clv": {
+      "clv": 2.05,
+      "oddEntrada": 2.73,
+      "oddFechamento": 2.73
+    },
+    "ranking": {
+      "score": 65.38,
+      "classe": "NEUTRA"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "ESPN"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 1.6,
+        "sofre_media": 0.82
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  },
+  {
+    "esporte": "futebol",
+    "mercado": "mercado_futebol",
+    "liga": "ESPN",
+    "casa": "Coritiba",
+    "fora": "Vasco da Gama",
+    "horario": "2026-04-01T23:30Z",
+    "risco": {
+      "riscoTotal": 52,
+      "nivel": "MODERADO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 12.67,
+      "odd": 1.69,
+      "probReal": 46.86,
+      "probCasa": 56.95,
+      "nivel": "EDGE ALTO"
+    },
+    "xg": {
+      "xgTotal": 3.77,
+      "xgMandante": 1.96,
+      "xgVisitante": 1.81
+    },
+    "clv": {
+      "clv": 0.68,
+      "oddEntrada": 2.79,
+      "oddFechamento": 2.46
+    },
+    "ranking": {
+      "score": 52.83,
+      "classe": "NEUTRA"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "ESPN"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 1.18,
+        "sofre_media": 0.7
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  },
+  {
+    "esporte": "futebol",
+    "mercado": "mercado_futebol",
+    "liga": "ESPN",
+    "casa": "Red Bull Bragantino",
+    "fora": "Flamengo",
+    "horario": "2026-04-03T00:30Z",
+    "risco": {
+      "riscoTotal": 67,
+      "nivel": "ALTO RISCO",
+      "relatorio": []
+    },
+    "edge": {
+      "edge": 13.4,
+      "odd": 2,
+      "probReal": 58.75,
+      "probCasa": 61.92,
+      "nivel": "EDGE ALTO"
+    },
+    "xg": {
+      "xgTotal": 3.12,
+      "xgMandante": 1.62,
+      "xgVisitante": 1.5
+    },
+    "clv": {
+      "clv": -0.85,
+      "oddEntrada": 2.59,
+      "oddFechamento": 2.07
+    },
+    "ranking": {
+      "score": 48.02,
+      "classe": "NEUTRA"
+    },
+    "origemDados": {
+      "sintetico": false,
+      "fonte": "ESPN"
+    },
+    "conformacao": {
+      "casa": {
+        "ultimos5": "-",
+        "gols_media": 0.92,
+        "sofre_media": 0.87
+      }
+    },
+    "lesoes": {
+      "casa": []
+    }
+  }
+]
