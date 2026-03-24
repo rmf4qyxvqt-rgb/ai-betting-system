@@ -46,8 +46,20 @@ function lerJsonSeguro(caminho, fallback) {
   }
 }
 
+function deduplicarJogosBase(jogos) {
+  if (!Array.isArray(jogos)) return [];
+  const mapa = new Map();
+  for (const jogo of jogos) {
+    const key = `${String(jogo?.liga || "").toLowerCase()}|${String(jogo?.casa || "").toLowerCase()}|${String(jogo?.fora || "").toLowerCase()}`;
+    if (!mapa.has(key)) {
+      mapa.set(key, jogo);
+    }
+  }
+  return Array.from(mapa.values());
+}
+
 function obterJogosPersistidos() {
-  return lerJsonSeguro(JOGOS_HOJE_PATH, []);
+  return deduplicarJogosBase(lerJsonSeguro(JOGOS_HOJE_PATH, []));
 }
 
 process.on("unhandledRejection", (erro) => {
