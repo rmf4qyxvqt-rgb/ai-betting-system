@@ -281,6 +281,86 @@
       border-color: var(--accent);
     }
 
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 8, 14, 0.84);
+      backdrop-filter: blur(6px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 780px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: linear-gradient(160deg, #0f1f31, #0c1826);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .modal-title {
+      font-size: 0.98rem;
+      font-weight: 800;
+      color: var(--txt);
+    }
+
+    .modal-close {
+      border: 1px solid var(--line);
+      background: rgba(16, 32, 50, 0.8);
+      color: var(--txt);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .analysis-block {
+      background: rgba(16, 32, 50, 0.6);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .analysis-block h4 {
+      font-size: 0.82rem;
+      margin-bottom: 6px;
+      color: #d7e8fb;
+    }
+
+    .analysis-line {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .analysis-line strong {
+      color: var(--txt);
+    }
+
     .loading {
       text-align: center;
       padding: 20px;
@@ -374,6 +454,16 @@
     </div>
   </div>
 
+  <div id="analysis-modal" class="modal-overlay" onclick="if(event.target===this){fecharAnalise();}">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title">Análise Completa do Jogo</div>
+        <button class="modal-close" onclick="fecharAnalise()">Fechar</button>
+      </div>
+      <div id="analysis-content" class="loading"><div class="spinner"></div> Carregando análise...</div>
+    </div>
+  </div>
+
   <div class="tab-navigation">
     <button class="tab-btn active" onclick="switchTabMobile('resumo', this)">📊 Resumo</button>
     <button class="tab-btn" onclick="switchTabMobile('oportunidades', this)">🎯 Oportunidades</button>
@@ -388,6 +478,15 @@
 
     let dadosCache = {};
     let filtroEsporte = 'futebol';
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
     function switchTabMobile(tabName, clickedButton) {
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -553,6 +652,9 @@
             <div class="stat-item">Edge <strong>${Number(j?.edge?.edge || 0).toFixed(1)}%</strong></div>
             <div class="stat-item">Risco <strong>${Number(j?.risco?.riscoTotal || 0).toFixed(0)}%</strong></div>
           </div>
+          <div style="margin-top:8px;">
+            <button class="sport-btn" style="font-size:0.72rem;" onclick="abrirAnalise('${encodeURIComponent(j.casa || '')}','${encodeURIComponent(j.fora || '')}','${encodeURIComponent(j.esporte || '')}','${encodeURIComponent(j.liga || '')}')">Abrir análise completa</button>
+          </div>
         </div>
       `).join('');
 
@@ -607,6 +709,97 @@
           ${j.lesoes?.casa?.length ? `<div style="color: var(--risk); font-size: 0.75rem;">⚠️ ${j.lesoes.casa.join(', ')}</div>` : ''}
         </div>
       `).join('') : '<p style="color: var(--muted);">Sem dados</p>';
+    }
+
+    function fecharAnalise() {
+      document.getElementById('analysis-modal').classList.remove('open');
+    }
+
+    function renderAnaliseHtml(analise) {
+      const esporte = String(analise?.esporte || '').toLowerCase();
+      const jogo = analise?.jogo || {};
+      const integridade = analise?.integridade || {};
+      const riscoClass = integridade?.classificacao === 'alto' ? 'risk' : (integridade?.classificacao === 'moderado' ? 'warn' : 'ok');
+
+      if (esporte === 'basquete') {
+        const proj = analise?.projecoes || {};
+        return `
+          <div class="analysis-grid">
+            <div class="analysis-block">
+              <h4>🏀 ${escapeHtml(jogo.casa)} x ${escapeHtml(jogo.fora)}</h4>
+              <div class="analysis-line">Liga: <strong>${escapeHtml(jogo.liga)}</strong></div>
+              <div class="analysis-line">Quem tem mais chance: <strong>${escapeHtml(analise?.vencedorProvavel?.equipe)}</strong> (${Number(analise?.vencedorProvavel?.probabilidade || 0).toFixed(2)}%)</div>
+              <div class="analysis-line">Probabilidades: <strong>${escapeHtml(jogo.casa)} ${Number(analise?.probabilidades?.casa || 0).toFixed(2)}%</strong> | <strong>${escapeHtml(jogo.fora)} ${Number(analise?.probabilidades?.fora || 0).toFixed(2)}%</strong></div>
+            </div>
+            <div class="analysis-block">
+              <h4>📈 Projeções de Pontos</h4>
+              <div class="analysis-line">Pontos no jogo todo: <strong>${escapeHtml(jogo.casa)} ${Number(proj?.pontosJogo?.casa || 0).toFixed(1)}</strong> | <strong>${escapeHtml(jogo.fora)} ${Number(proj?.pontosJogo?.fora || 0).toFixed(1)}</strong> | Total <strong>${Number(proj?.pontosJogo?.total || 0).toFixed(1)}</strong></div>
+              <div class="analysis-line">1º quarto: <strong>${escapeHtml(jogo.casa)} ${Number(proj?.primeiroQuarto?.casa || 0).toFixed(1)}</strong> | <strong>${escapeHtml(jogo.fora)} ${Number(proj?.primeiroQuarto?.fora || 0).toFixed(1)}</strong> | Total <strong>${Number(proj?.primeiroQuarto?.total || 0).toFixed(1)}</strong></div>
+              <div class="analysis-line">1º tempo: <strong>${escapeHtml(jogo.casa)} ${Number(proj?.primeiroTempo?.casa || 0).toFixed(1)}</strong> | <strong>${escapeHtml(jogo.fora)} ${Number(proj?.primeiroTempo?.fora || 0).toFixed(1)}</strong> | Total <strong>${Number(proj?.primeiroTempo?.total || 0).toFixed(1)}</strong></div>
+            </div>
+            <div class="analysis-block">
+              <h4>🛡️ Integridade / Manipulação</h4>
+              <div class="analysis-line">Risco de manipulação: <strong class="${riscoClass}">${Number(integridade?.riscoManipulacao || 0).toFixed(2)} (${escapeHtml(integridade?.classificacao || '-')})</strong></div>
+              <div class="analysis-line">Pode haver manipulação? <strong class="${integridade?.podeHaverManipulacao ? 'risk' : 'ok'}">${integridade?.podeHaverManipulacao ? 'SIM, monitorar' : 'Sem indícios fortes agora'}</strong></div>
+              ${(integridade?.sinais || []).map((s) => `<div class="analysis-line">• ${escapeHtml(s)}</div>`).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      const medias = analise?.medias || {};
+      const probs = analise?.probabilidades || {};
+      return `
+        <div class="analysis-grid">
+          <div class="analysis-block">
+            <h4>⚽ ${escapeHtml(jogo.casa)} x ${escapeHtml(jogo.fora)}</h4>
+            <div class="analysis-line">Liga: <strong>${escapeHtml(jogo.liga)}</strong></div>
+            <div class="analysis-line">Maior probabilidade de vencer: <strong>${escapeHtml(analise?.vencedorProvavel?.equipe)}</strong> (${Number(analise?.vencedorProvavel?.probabilidade || 0).toFixed(2)}%)</div>
+            <div class="analysis-line">Probabilidades 1X2: <strong>${escapeHtml(jogo.casa)} ${Number(probs?.casa || 0).toFixed(2)}%</strong> | Empate <strong>${Number(probs?.empate || 0).toFixed(2)}%</strong> | <strong>${escapeHtml(jogo.fora)} ${Number(probs?.fora || 0).toFixed(2)}%</strong></div>
+          </div>
+          <div class="analysis-block">
+            <h4>📊 Médias projetadas do jogo</h4>
+            <div class="analysis-line">Escanteios: <strong>${escapeHtml(jogo.casa)} ${Number(medias?.escanteios?.casa || 0).toFixed(2)}</strong> | <strong>${escapeHtml(jogo.fora)} ${Number(medias?.escanteios?.fora || 0).toFixed(2)}</strong> | Total <strong>${Number(medias?.escanteios?.confronto || 0).toFixed(2)}</strong></div>
+            <div class="analysis-line">Gols: <strong>${escapeHtml(jogo.casa)} ${Number(medias?.gols?.casa || 0).toFixed(2)}</strong> | <strong>${escapeHtml(jogo.fora)} ${Number(medias?.gols?.fora || 0).toFixed(2)}</strong> | Total <strong>${Number(medias?.gols?.confronto || 0).toFixed(2)}</strong></div>
+            <div class="analysis-line">Cartões: <strong>${escapeHtml(jogo.casa)} ${Number(medias?.cartoes?.casa || 0).toFixed(2)}</strong> | <strong>${escapeHtml(jogo.fora)} ${Number(medias?.cartoes?.fora || 0).toFixed(2)}</strong> | Total <strong>${Number(medias?.cartoes?.confronto || 0).toFixed(2)}</strong></div>
+            <div class="analysis-line">Chutes: <strong>${escapeHtml(jogo.casa)} ${Number(medias?.chutes?.casa || 0).toFixed(2)}</strong> | <strong>${escapeHtml(jogo.fora)} ${Number(medias?.chutes?.fora || 0).toFixed(2)}</strong> | Total <strong>${Number(medias?.chutes?.confronto || 0).toFixed(2)}</strong></div>
+            <div class="analysis-line">Chutes no gol: <strong>${escapeHtml(jogo.casa)} ${Number(medias?.chutesNoGol?.casa || 0).toFixed(2)}</strong> | <strong>${escapeHtml(jogo.fora)} ${Number(medias?.chutesNoGol?.fora || 0).toFixed(2)}</strong> | Total <strong>${Number(medias?.chutesNoGol?.confronto || 0).toFixed(2)}</strong></div>
+          </div>
+          <div class="analysis-block">
+            <h4>🛡️ Integridade / Manipulação</h4>
+            <div class="analysis-line">Risco de manipulação: <strong class="${riscoClass}">${Number(integridade?.riscoManipulacao || 0).toFixed(2)} (${escapeHtml(integridade?.classificacao || '-')})</strong></div>
+            <div class="analysis-line">Pode haver manipulação? <strong class="${integridade?.podeHaverManipulacao ? 'risk' : 'ok'}">${integridade?.podeHaverManipulacao ? 'SIM, monitorar' : 'Sem indícios fortes agora'}</strong></div>
+            ${(integridade?.sinais || []).map((s) => `<div class="analysis-line">• ${escapeHtml(s)}</div>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    async function abrirAnalise(casaEnc, foraEnc, esporteEnc, ligaEnc) {
+      const casa = decodeURIComponent(casaEnc || '');
+      const fora = decodeURIComponent(foraEnc || '');
+      const esporte = decodeURIComponent(esporteEnc || '');
+      const liga = decodeURIComponent(ligaEnc || '');
+
+      const modal = document.getElementById('analysis-modal');
+      const content = document.getElementById('analysis-content');
+      modal.classList.add('open');
+      content.className = 'loading';
+      content.innerHTML = '<div class="spinner"></div> Carregando análise...';
+
+      try {
+        const qs = new URLSearchParams({ casa, fora, esporte, liga });
+        const resp = await fetch(`/analise-jogo?${qs.toString()}`);
+        const data = await resp.json();
+        if (!resp.ok || data?.status !== 'ok') {
+          throw new Error(data?.mensagem || 'Falha ao carregar análise');
+        }
+        content.className = '';
+        content.innerHTML = renderAnaliseHtml(data.analise || {});
+      } catch (err) {
+        content.className = '';
+        content.innerHTML = `<p style="color: var(--risk);">Erro ao carregar análise: ${escapeHtml(err?.message || 'erro inesperado')}</p>`;
+      }
     }
 
     refreshDados(document.querySelector('.refresh-btn'));

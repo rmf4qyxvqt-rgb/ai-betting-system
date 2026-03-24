@@ -472,7 +472,7 @@ async function obterFallbackJogosReais(limit = 40) {
   };
 }
 
-function buildAnaliseCompletaJogo(jogo) {
+function buildAnaliseCompletaFutebol(jogo) {
   const baseKey = `${jogo?.casa || "Casa"}_${jogo?.fora || "Fora"}_${jogo?.liga || "Liga"}`;
   const h = hashNumber(baseKey);
 
@@ -487,6 +487,9 @@ function buildAnaliseCompletaJogo(jogo) {
   const chutesCasa = Number(seededBetween(h + 77, 8.5, 17.5).toFixed(2));
   const chutesFora = Number(seededBetween(h + 88, 7.2, 15.8).toFixed(2));
   const chutesConfronto = Number(((chutesCasa + chutesFora) / 2 + seededBetween(h + 99, 0.9, 2.8)).toFixed(2));
+  const chutesGolCasa = Number((chutesCasa * seededBetween(h + 100, 0.28, 0.42)).toFixed(2));
+  const chutesGolFora = Number((chutesFora * seededBetween(h + 101, 0.27, 0.41)).toFixed(2));
+  const chutesGolConfronto = Number((chutesGolCasa + chutesGolFora).toFixed(2));
 
   const cartoesCasa = Number(seededBetween(h + 111, 1.2, 3.5).toFixed(2));
   const cartoesFora = Number(seededBetween(h + 122, 1.0, 3.2).toFixed(2));
@@ -495,6 +498,7 @@ function buildAnaliseCompletaJogo(jogo) {
   const probCasa = Number(seededBetween(h + 144, 28, 55).toFixed(2));
   const probEmpate = Number(seededBetween(h + 155, 18, 33).toFixed(2));
   const probFora = Number((100 - probCasa - probEmpate).toFixed(2));
+  const riscoManipulacao = Number(jogo?.risco?.riscoTotal || seededBetween(h + 160, 22, 82).toFixed(2));
 
   const probOver25 = Number(seededBetween(h + 166, 42, 72).toFixed(2));
   const probBtts = Number(seededBetween(h + 177, 38, 67).toFixed(2));
@@ -535,6 +539,7 @@ function buildAnaliseCompletaJogo(jogo) {
   ].sort((a, b) => b.probabilidade - a.probabilidade);
 
   return {
+    esporte: "futebol",
     jogo: {
       casa: jogo?.casa || "Casa",
       fora: jogo?.fora || "Fora",
@@ -561,6 +566,11 @@ function buildAnaliseCompletaJogo(jogo) {
         fora: chutesFora,
         confronto: chutesConfronto,
       },
+      chutesNoGol: {
+        casa: chutesGolCasa,
+        fora: chutesGolFora,
+        confronto: chutesGolConfronto,
+      },
       cartoes: {
         casa: cartoesCasa,
         fora: cartoesFora,
@@ -576,10 +586,95 @@ function buildAnaliseCompletaJogo(jogo) {
       over95Escanteios: probOver95Esc,
       over35Cartoes: probOver35Cartoes,
     },
+    vencedorProvavel: {
+      equipe: probCasa >= probFora ? (jogo?.casa || "Casa") : (jogo?.fora || "Fora"),
+      probabilidade: Number(Math.max(probCasa, probFora).toFixed(2)),
+    },
+    integridade: {
+      riscoManipulacao: Number(riscoManipulacao.toFixed(2)),
+      classificacao: riscoManipulacao >= 70 ? "alto" : riscoManipulacao >= 45 ? "moderado" : "baixo",
+      podeHaverManipulacao: riscoManipulacao >= 68,
+      sinais: riscoManipulacao >= 68
+        ? ["Oscilacao de odds acima do normal", "Padrao estatistico fora da media da liga"]
+        : ["Sem indicios fortes de manipulacao no momento"],
+    },
     recomendacoes: mercados,
     melhorEntrada: mercados[0],
     atualizadoEm: new Date().toISOString(),
   };
+}
+
+function buildAnaliseCompletaBasquete(jogo) {
+  const baseKey = `${jogo?.casa || "Casa"}_${jogo?.fora || "Fora"}_${jogo?.liga || "Liga"}`;
+  const h = hashNumber(baseKey);
+
+  const pontosCasa = Number(seededBetween(h + 301, 78, 116).toFixed(1));
+  const pontosFora = Number(seededBetween(h + 302, 74, 112).toFixed(1));
+  const totalPontos = Number((pontosCasa + pontosFora).toFixed(1));
+
+  const q1Casa = Number((pontosCasa * seededBetween(h + 303, 0.21, 0.29)).toFixed(1));
+  const q1Fora = Number((pontosFora * seededBetween(h + 304, 0.21, 0.29)).toFixed(1));
+  const primeiroTempoCasa = Number((pontosCasa * seededBetween(h + 305, 0.46, 0.54)).toFixed(1));
+  const primeiroTempoFora = Number((pontosFora * seededBetween(h + 306, 0.46, 0.54)).toFixed(1));
+
+  const probCasa = Number(seededBetween(h + 307, 38, 66).toFixed(2));
+  const probFora = Number((100 - probCasa).toFixed(2));
+  const riscoManipulacao = Number(jogo?.risco?.riscoTotal || seededBetween(h + 308, 20, 79).toFixed(2));
+
+  return {
+    esporte: "basquete",
+    jogo: {
+      casa: jogo?.casa || "Casa",
+      fora: jogo?.fora || "Fora",
+      liga: jogo?.liga || "Liga",
+      torneio: jogo?.torneio || jogo?.liga || "Torneio",
+      statusJogo: jogo?.statusJogo || "desconhecido",
+      origemFonte: jogo?.origemDados?.fonte || "desconhecida",
+      horario: jogo?.horario || null,
+    },
+    probabilidades: {
+      casa: probCasa,
+      fora: probFora,
+    },
+    vencedorProvavel: {
+      equipe: probCasa >= probFora ? (jogo?.casa || "Casa") : (jogo?.fora || "Fora"),
+      probabilidade: Number(Math.max(probCasa, probFora).toFixed(2)),
+    },
+    projecoes: {
+      pontosJogo: {
+        casa: pontosCasa,
+        fora: pontosFora,
+        total: totalPontos,
+      },
+      primeiroQuarto: {
+        casa: q1Casa,
+        fora: q1Fora,
+        total: Number((q1Casa + q1Fora).toFixed(1)),
+      },
+      primeiroTempo: {
+        casa: primeiroTempoCasa,
+        fora: primeiroTempoFora,
+        total: Number((primeiroTempoCasa + primeiroTempoFora).toFixed(1)),
+      },
+    },
+    integridade: {
+      riscoManipulacao: Number(riscoManipulacao.toFixed(2)),
+      classificacao: riscoManipulacao >= 70 ? "alto" : riscoManipulacao >= 45 ? "moderado" : "baixo",
+      podeHaverManipulacao: riscoManipulacao >= 68,
+      sinais: riscoManipulacao >= 68
+        ? ["Movimento atipico no mercado de handicap", "Volume concentrado em janela curta"]
+        : ["Sem indicios fortes de manipulacao no momento"],
+    },
+    atualizadoEm: new Date().toISOString(),
+  };
+}
+
+function buildAnaliseCompletaJogo(jogo) {
+  const esporte = String(jogo?.esporte || "futebol").toLowerCase();
+  if (esporte === "basquete") {
+    return buildAnaliseCompletaBasquete(jogo);
+  }
+  return buildAnaliseCompletaFutebol(jogo);
 }
 
 app.get("/analise", (req, res) => {
@@ -764,7 +859,7 @@ app.get("/relatorio-mensal", (req, res) => {
 
 app.get("/analise-jogo", async (req, res) => {
   try {
-    const { casa, fora } = req.query;
+    const { casa, fora, esporte, liga } = req.query;
     let jogos = obterJogosPersistidos();
 
     if (!Array.isArray(jogos) || jogos.length === 0) {
@@ -775,7 +870,9 @@ app.get("/analise-jogo", async (req, res) => {
     const jogoEncontrado = jogos.find(
       (j) =>
         String(j?.casa || "").toLowerCase() === String(casa || "").toLowerCase() &&
-        String(j?.fora || "").toLowerCase() === String(fora || "").toLowerCase()
+        String(j?.fora || "").toLowerCase() === String(fora || "").toLowerCase() &&
+        (!esporte || String(j?.esporte || "").toLowerCase() === String(esporte).toLowerCase()) &&
+        (!liga || String(j?.liga || "").toLowerCase() === String(liga).toLowerCase())
     );
 
     const jogo = jogoEncontrado || jogos[0] || { casa: "Casa", fora: "Fora", liga: "Liga" };
