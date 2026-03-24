@@ -238,10 +238,15 @@ app.get("/scanner-global", async (req, res) => {
     const payload = lite ? compactarResultadoScanner(resultadoScanner, limit) : resultadoScanner;
     res.json(payload);
   } catch (erro) {
-    res.status(500).json({
-      status: "erro",
-      mensagem: "Falha ao executar scanner global.",
-      detalhe: String(erro?.message || erro),
+    console.error("[ERRO /scanner-global]", erro instanceof Error ? erro.message : String(erro));
+    // Retornar fallback com estrutura esperada em vez de 500
+    res.json({
+      total: 0,
+      jogos: [],
+      alertas: [],
+      diagnostico: { status: "erro", mensagem: "Dados temporariamente indisponíveis" },
+      fontes: {},
+      totalJogos: 0,
     });
   }
 });
