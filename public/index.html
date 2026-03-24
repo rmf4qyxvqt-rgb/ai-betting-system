@@ -392,10 +392,20 @@
           fetch('/oportunidades')
         ]);
 
-        const scanner = await parseSafeJson(scannerRes, dadosCache.scanner || { jogos: [], metricas: {}, banca: {}, totalJogos: 0 });
+        let scanner = await parseSafeJson(scannerRes, dadosCache.scanner || { jogos: [], metricas: {}, banca: {}, totalJogos: 0 });
         const alertas = await parseSafeJson(alertasRes, dadosCache.alertas || { alertas: [] });
         const clv = await parseSafeJson(clvRes, dadosCache.clv || { mediaCLV: 0, totalRegistros: 0, positivos: 0, negativos: 0 });
         const oportunidades = await parseSafeJson(oportunidadesRes, dadosCache.oportunidades || { oportunidades: [] });
+
+        // Se o scanner vier vazio, reaproveita oportunidades persistidas para manter o dashboard util.
+        if ((!Array.isArray(scanner?.jogos) || scanner.jogos.length === 0) && Array.isArray(oportunidades?.oportunidades) && oportunidades.oportunidades.length > 0) {
+          scanner = {
+            ...scanner,
+            jogos: oportunidades.oportunidades,
+            totalJogos: oportunidades.oportunidades.length,
+            total: oportunidades.oportunidades.length,
+          };
+        }
 
         dadosCache = { scanner, alertas, clv, oportunidades };
         renderTab1Mobile();
@@ -468,7 +478,9 @@
     }
 
     function renderTab2Mobile() {
-      const oportunidades = dadosCache.scanner?.jogos || [];
+      const oportunidades = (dadosCache.scanner?.jogos || []).length
+        ? (dadosCache.scanner?.jogos || [])
+        : (dadosCache.oportunidades?.oportunidades || []);
       const container = document.getElementById('lista-oportunidades');
       
       container.innerHTML = oportunidades.length ? oportunidades.map(j => `
