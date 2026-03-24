@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import fs from "fs";
 import path from "path";
+import fetch from "node-fetch";
 import { fileURLToPath } from "url";
 import { calcularRiscoFinal } from "./engine/riskEngine.js";
 import { aprenderLiga } from "./ia/ligaInteligente.js";
@@ -387,7 +388,11 @@ app.get("/scanner-global", async (req, res) => {
         total: 0,
         jogos: [],
         alertas: [],
-        diagnostico: { status: "erro", mensagem: "Dados temporariamente indisponíveis" },
+        diagnostico: {
+          status: "erro",
+          mensagem: "Dados temporariamente indisponíveis",
+          detalhe: String(fallbackErro?.message || fallbackErro || "falha_desconhecida"),
+        },
         fontes: {},
         totalJogos: 0,
       });
