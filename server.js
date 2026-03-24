@@ -23,6 +23,7 @@ const PROJECT_ROOT = __dirname;
 const DATABASE_DIR = path.join(PROJECT_ROOT, "database");
 const JOGOS_HOJE_PATH = path.join(DATABASE_DIR, "jogosHoje.json");
 const HISTORICO_ODDS_PATH = path.join(DATABASE_DIR, "historico_odds.json");
+const APP_TIMEZONE = process.env.APP_TIMEZONE || "America/Sao_Paulo";
 
 if (process.cwd() !== PROJECT_ROOT) {
   process.chdir(PROJECT_ROOT);
@@ -117,6 +118,41 @@ function listaDatasISO(qtdDias = 3) {
     datas.push(d.toISOString().split("T")[0]);
   }
   return datas;
+}
+
+function listaDatasAoRedorHoje() {
+  const datas = [];
+  const agora = new Date();
+  for (let i = -1; i <= 1; i++) {
+    const d = new Date(agora);
+    d.setDate(agora.getDate() + i);
+    datas.push(d.toISOString().split("T")[0]);
+  }
+  return datas;
+}
+
+function formatarDiaLocal(dataTexto, timeZone = APP_TIMEZONE) {
+  const data = new Date(dataTexto);
+  if (Number.isNaN(data.getTime())) return null;
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(data);
+  const year = partes.find((p) => p.type === "year")?.value;
+  const month = partes.find((p) => p.type === "month")?.value;
+  const day = partes.find((p) => p.type === "day")?.value;
+  return year && month && day ? `${year}-${month}-${day}` : null;
+}
+
+function obterDiaAtualLocal(timeZone = APP_TIMEZONE) {
+  return formatarDiaLocal(new Date().toISOString(), timeZone);
+}
+
+function filtrarJogosDoDia(jogos, timeZone = APP_TIMEZONE) {
+  const hojeLocal = obterDiaAtualLocal(timeZone);
+  return (jogos || []).filter((jogo) => formatarDiaLocal(jogo?.horario || jogo?.date || jogo?.fixture?.date, timeZone) === hojeLocal);
 }
 
 function normalizarJogoPublico(evento, esporte) {
@@ -234,23 +270,25 @@ function normalizarJogoOpenLiga(evento) {
 }
 
 async function obterFallbackJogosReais(limit = 40) {
-  const datas = listaDatasISO(3);
+  const datas = listaDatasAoRedorHoje();
   const jogos = [];
-
-  // TheSportsDB (futebol + basquete)
-  const esportes = ["Soccer", "Basketball"];
-
-  for (const esportePublico of esportes) {
+  // SofaScore e a fonte principal porque cobre melhor os eventos do dia.
+  for (const item of [{ slug: "football", esporte: "futebol" }, { slug: "basketball", esporte: "basquete" }]) {
     for (const dataISO of datas) {
       try {
-        const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${dataISO}&s=${esportePublico}`);
+        const res = await fetch(`https://api.sofascore.com/api/v1/sport/${item.slug}/scheduled-events/${dataISO}`, {
+          headers: {
+            "User-Agent": "Mozilla/5.0",
+            Accept: "application/json",
+            Referer: "https://www.sofascore.com/",
+          },
+        });
         if (!res.ok) continue;
         const json = await res.json();
-        const lista = Array.isArray(json?.events) ? json.events : [];
-        const esporte = esportePublico === "Soccer" ? "futebol" : "basquete";
-        jogos.push(...lista.map((evento) => normalizarJogoPublico(evento, esporte)));
+        const eventos = Array.isArray(json?.events) ? json.events : [];
+        jogos.push(...eventos.map((evento) => normalizarJogoSofa(evento, item.esporte)));
       } catch {
-        // Ignora erro pontual de fonte publica e segue para proxima.
+        // Ignora falha pontual.
       }
     }
   }
@@ -273,27 +311,19 @@ async function obterFallbackJogosReais(limit = 40) {
     }
   }
 
-  // SofaScore futebol + basquete
-  const esportesSofa = [
-    { slug: "football", esporte: "futebol" },
-    { slug: "basketball", esporte: "basquete" },
-  ];
-  for (const item of esportesSofa) {
+  // TheSportsDB complementa em caso de gaps pontuais.
+  const esportes = ["Soccer", "Basketball"];
+  for (const esportePublico of esportes) {
     for (const dataISO of datas) {
       try {
-        const res = await fetch(`https://api.sofascore.com/api/v1/sport/${item.slug}/scheduled-events/${dataISO}`, {
-          headers: {
-            "User-Agent": "Mozilla/5.0",
-            Accept: "application/json",
-            Referer: "https://www.sofascore.com/",
-          },
-        });
+        const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${dataISO}&s=${esportePublico}`);
         if (!res.ok) continue;
         const json = await res.json();
-        const eventos = Array.isArray(json?.events) ? json.events : [];
-        jogos.push(...eventos.map((evento) => normalizarJogoSofa(evento, item.esporte)));
+        const lista = Array.isArray(json?.events) ? json.events : [];
+        const esporte = esportePublico === "Soccer" ? "futebol" : "basquete";
+        jogos.push(...lista.map((evento) => normalizarJogoPublico(evento, esporte)));
       } catch {
-        // Ignora falha pontual.
+        // Ignora erro pontual de fonte publica e segue para proxima.
       }
     }
   }
@@ -319,11 +349,11 @@ async function obterFallbackJogosReais(limit = 40) {
     }
   }
 
-  const jogosUnicos = Array.from(unicos.values())
+  const jogosUnicos = filtrarJogosDoDia(Array.from(unicos.values()))
     .sort((a, b) => Number(b?.ranking?.score || 0) - Number(a?.ranking?.score || 0))
     .slice(0, Math.max(10, Number(limit || 40)));
 
-  const jogosPersistidos = obterJogosPersistidos();
+  const jogosPersistidos = filtrarJogosDoDia(obterJogosPersistidos());
   const jogosPersistidosValidos = Array.isArray(jogosPersistidos)
     ? jogosPersistidos.filter((j) => j?.casa && j?.fora && j?.liga)
     : [];
