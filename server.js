@@ -280,11 +280,19 @@ app.get("/oportunidades", (req, res) => {
 });
 
 app.get("/alertas", async (req, res) => {
-  const dados = await obterScannerGlobal();
-  res.json({
-    total: (dados?.alertas || []).length,
-    alertas: dados?.alertas || [],
-  });
+  try {
+    const dados = await obterScannerGlobal();
+    res.json({
+      total: (dados?.alertas || []).length,
+      alertas: dados?.alertas || [],
+    });
+  } catch (erro) {
+    console.error("[ERRO /alertas]", erro instanceof Error ? erro.message : String(erro));
+    res.json({
+      total: 0,
+      alertas: [],
+    });
+  }
 });
 
 app.get("/status-profissional", (req, res) => {
@@ -313,10 +321,13 @@ app.get("/diagnostico-operacao", async (req, res) => {
       atualizadoEm: new Date().toISOString(),
     });
   } catch (erro) {
-    res.status(500).json({
-      status: "erro",
-      mensagem: "Falha ao gerar diagnostico operacional",
-      detalhe: String(erro?.message || erro),
+    console.error("[ERRO /diagnostico-operacao]", erro instanceof Error ? erro.message : String(erro));
+    res.json({
+      status: "indisponivel",
+      diagnostico: { status: "erro", mensagem: "Dados temporariamente indisponíveis" },
+      fontes: {},
+      totalJogos: 0,
+      atualizadoEm: new Date().toISOString(),
     });
   }
 });
