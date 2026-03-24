@@ -163,6 +163,36 @@ function filtrarJogosPorDiaAlvo(jogos, offsetDias = APP_TARGET_DAY_OFFSET, timeZ
   return (jogos || []).filter((jogo) => formatarDiaLocal(jogo?.horario || jogo?.date || jogo?.fixture?.date, timeZone) === diaAlvo);
 }
 
+function resolverMelhorOffsetComDados(jogos, preferredOffset = APP_TARGET_DAY_OFFSET, timeZone = APP_TIMEZONE) {
+  const candidatos = [preferredOffset, 0, 1, 2, -1];
+  const vistos = new Set();
+  const unicos = candidatos.filter((o) => {
+    const key = Number(o || 0);
+    if (vistos.has(key)) return false;
+    vistos.add(key);
+    return true;
+  });
+
+  let melhor = {
+    offset: Number(preferredOffset || 0),
+    total: 0,
+    dia: obterDiaAlvoLocal(preferredOffset, timeZone),
+  };
+
+  for (const offset of unicos) {
+    const lista = filtrarJogosPorDiaAlvo(jogos, offset, timeZone);
+    if (lista.length > melhor.total) {
+      melhor = {
+        offset: Number(offset || 0),
+        total: lista.length,
+        dia: obterDiaAlvoLocal(offset, timeZone),
+      };
+    }
+  }
+
+  return melhor;
+}
+
 function separarPorEsporte(jogos) {
   const lista = Array.isArray(jogos) ? jogos : [];
   return {
@@ -172,7 +202,9 @@ function separarPorEsporte(jogos) {
 }
 
 function aplicarFiltroAlvoEPorEsporte(payloadBase, limit = 320) {
-  const jogosFiltrados = filtrarJogosPorDiaAlvo(payloadBase?.jogos || [], APP_TARGET_DAY_OFFSET)
+  const jogosOriginais = payloadBase?.jogos || [];
+  const melhorOffset = resolverMelhorOffsetComDados(jogosOriginais, APP_TARGET_DAY_OFFSET, APP_TIMEZONE);
+  const jogosFiltrados = filtrarJogosPorDiaAlvo(jogosOriginais, melhorOffset.offset, APP_TIMEZONE)
     .sort((a, b) => Number(b?.ranking?.score || 0) - Number(a?.ranking?.score || 0))
     .slice(0, Math.max(10, Number(limit || 320)));
   const grupos = separarPorEsporte(jogosFiltrados);
@@ -184,8 +216,8 @@ function aplicarFiltroAlvoEPorEsporte(payloadBase, limit = 320) {
     jogosBasquete: grupos.basquete,
     totalJogos: jogosFiltrados.length,
     total: jogosFiltrados.length,
-    alvoData: obterDiaAlvoLocal(APP_TARGET_DAY_OFFSET),
-    alvoOffsetDias: APP_TARGET_DAY_OFFSET,
+    alvoData: melhorOffset.dia,
+    alvoOffsetDias: melhorOffset.offset,
     timezone: APP_TIMEZONE,
   };
 }
@@ -606,13 +638,17 @@ app.get("/scanner-global", async (req, res) => {
 });
 
 app.get("/jogos-hoje", (req, res) => {
-  const dados = filtrarJogosPorDiaAlvo(obterJogosPersistidos(), APP_TARGET_DAY_OFFSET);
+  const base = obterJogosPersistidos();
+  const melhorOffset = resolverMelhorOffsetComDados(base, APP_TARGET_DAY_OFFSET, APP_TIMEZONE);
+  const dados = filtrarJogosPorDiaAlvo(base, melhorOffset.offset);
 
   res.json(dados);
 });
 
 app.get("/oportunidades", (req, res) => {
-  const jogos = filtrarJogosPorDiaAlvo(obterJogosPersistidos(), APP_TARGET_DAY_OFFSET);
+  const base = obterJogosPersistidos();
+  const melhorOffset = resolverMelhorOffsetComDados(base, APP_TARGET_DAY_OFFSET, APP_TIMEZONE);
+  const jogos = filtrarJogosPorDiaAlvo(base, melhorOffset.offset);
   const ordenados = [...jogos].sort(
     (a, b) => Number(b?.ranking?.score || 0) - Number(a?.ranking?.score || 0)
   );
@@ -629,8 +665,8 @@ app.get("/oportunidades", (req, res) => {
   res.json({
     total: oportunidades.length,
     criterioAplicado: criterio,
-    alvoData: obterDiaAlvoLocal(APP_TARGET_DAY_OFFSET),
-    alvoOffsetDias: APP_TARGET_DAY_OFFSET,
+    alvoData: obterDiaAlvoLocal(melhorOffset.offset),
+    alvoOffsetDias: melhorOffset.offset,
     timezone: APP_TIMEZONE,
     futebol: oportunidades.filter((j) => String(j?.esporte || "").toLowerCase() === "futebol"),
     basquete: oportunidades.filter((j) => String(j?.esporte || "").toLowerCase() === "basquete"),
