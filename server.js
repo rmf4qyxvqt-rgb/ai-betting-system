@@ -170,10 +170,63 @@ function normalizarJogoPublico(evento, esporte) {
   };
 }
 
+function normalizarJogoESPN(evento) {
+  const casa = evento?.competitions?.[0]?.competitors?.find((c) => c?.homeAway === "home")?.team?.displayName || "Time casa";
+  const fora = evento?.competitions?.[0]?.competitors?.find((c) => c?.homeAway === "away")?.team?.displayName || "Time fora";
+  const liga = evento?.leagues?.[0]?.name || "ESPN";
+  const date = evento?.date || new Date().toISOString();
+  return normalizarJogoPublico(
+    {
+      strHomeTeam: casa,
+      strAwayTeam: fora,
+      strLeague: liga,
+      strTimestamp: date,
+      idEvent: evento?.id || `${liga}_${casa}_${fora}_${date}`,
+    },
+    "futebol"
+  );
+}
+
+function normalizarJogoSofa(evento, esporte) {
+  const casa = evento?.homeTeam?.name || "Time casa";
+  const fora = evento?.awayTeam?.name || "Time fora";
+  const liga = evento?.tournament?.name || (esporte === "futebol" ? "SofaScore Futebol" : "SofaScore Basquete");
+  const date = evento?.startTimestamp ? new Date(evento.startTimestamp * 1000).toISOString() : new Date().toISOString();
+  return normalizarJogoPublico(
+    {
+      strHomeTeam: casa,
+      strAwayTeam: fora,
+      strLeague: liga,
+      strTimestamp: date,
+      idEvent: evento?.id || `${liga}_${casa}_${fora}_${date}`,
+    },
+    esporte
+  );
+}
+
+function normalizarJogoOpenLiga(evento) {
+  const casa = evento?.team1?.teamName || "Time casa";
+  const fora = evento?.team2?.teamName || "Time fora";
+  const liga = evento?.leagueName || "OpenLigaDB";
+  const date = evento?.matchDateTimeUTC || evento?.matchDateTime || new Date().toISOString();
+  return normalizarJogoPublico(
+    {
+      strHomeTeam: casa,
+      strAwayTeam: fora,
+      strLeague: liga,
+      strTimestamp: date,
+      idEvent: evento?.matchID || `${liga}_${casa}_${fora}_${date}`,
+    },
+    "futebol"
+  );
+}
+
 async function obterFallbackJogosReais(limit = 40) {
   const datas = listaDatasISO(3);
-  const esportes = ["Soccer", "Basketball"];
   const jogos = [];
+
+  // TheSportsDB (futebol + basquete)
+  const esportes = ["Soccer", "Basketball"];
 
   for (const esportePublico of esportes) {
     for (const dataISO of datas) {
@@ -187,6 +240,62 @@ async function obterFallbackJogosReais(limit = 40) {
       } catch {
         // Ignora erro pontual de fonte publica e segue para proxima.
       }
+    }
+  }
+
+  // ESPN futebol (ligas principais)
+  const ligasESPN = ["eng.1", "esp.1", "ger.1", "ita.1", "fra.1", "bra.1", "uefa.champions"];
+  for (const dataISO of datas) {
+    const dataCompacta = dataISO.replace(/-/g, "");
+    for (const liga of ligasESPN) {
+      try {
+        const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${liga}/scoreboard?dates=${dataCompacta}`;
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const json = await res.json();
+        const eventos = Array.isArray(json?.events) ? json.events : [];
+        jogos.push(...eventos.map((evento) => normalizarJogoESPN(evento)));
+      } catch {
+        // Ignora falha de liga especifica.
+      }
+    }
+  }
+
+  // SofaScore futebol + basquete
+  const esportesSofa = [
+    { slug: "football", esporte: "futebol" },
+    { slug: "basketball", esporte: "basquete" },
+  ];
+  for (const item of esportesSofa) {
+    for (const dataISO of datas) {
+      try {
+        const res = await fetch(`https://api.sofascore.com/api/v1/sport/${item.slug}/scheduled-events/${dataISO}`, {
+          headers: {
+            "User-Agent": "Mozilla/5.0",
+            Accept: "application/json",
+            Referer: "https://www.sofascore.com/",
+          },
+        });
+        if (!res.ok) continue;
+        const json = await res.json();
+        const eventos = Array.isArray(json?.events) ? json.events : [];
+        jogos.push(...eventos.map((evento) => normalizarJogoSofa(evento, item.esporte)));
+      } catch {
+        // Ignora falha pontual.
+      }
+    }
+  }
+
+  // OpenLigaDB futebol
+  for (const dataISO of datas) {
+    try {
+      const res = await fetch(`https://www.openligadb.de/api/getmatchdata/${dataISO}`);
+      if (!res.ok) continue;
+      const json = await res.json();
+      const eventos = Array.isArray(json) ? json : [];
+      jogos.push(...eventos.map((evento) => normalizarJogoOpenLiga(evento)));
+    } catch {
+      // Ignora falha de fonte.
     }
   }
 
