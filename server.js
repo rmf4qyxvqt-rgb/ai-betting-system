@@ -368,11 +368,11 @@ app.get("/analise", (req, res) => {
 });
 
 app.get("/scanner-global", async (req, res) => {
-  try {
-    const lite = String(req.query.lite || "0") === "1";
-    const limit = Number(req.query.limit || 320);
-    const cacheMs = lite ? 5 * 60 * 1000 : 60 * 1000;
+  const lite = String(req.query.lite || "0") === "1";
+  const limit = Number(req.query.limit || 320);
+  const cacheMs = lite ? 5 * 60 * 1000 : 60 * 1000;
 
+  try {
     const resultadoScanner = await obterScannerGlobal(cacheMs);
     const payload = lite ? compactarResultadoScanner(resultadoScanner, limit) : resultadoScanner;
     res.json(payload);
