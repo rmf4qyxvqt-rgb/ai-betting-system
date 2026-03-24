@@ -24,6 +24,7 @@ const DATABASE_DIR = path.join(PROJECT_ROOT, "database");
 const JOGOS_HOJE_PATH = path.join(DATABASE_DIR, "jogosHoje.json");
 const HISTORICO_ODDS_PATH = path.join(DATABASE_DIR, "historico_odds.json");
 const APP_TIMEZONE = process.env.APP_TIMEZONE || "America/Sao_Paulo";
+const APP_TARGET_DAY_OFFSET = Number(process.env.APP_TARGET_DAY_OFFSET || 1);
 
 if (process.cwd() !== PROJECT_ROOT) {
   process.chdir(PROJECT_ROOT);
@@ -150,9 +151,43 @@ function obterDiaAtualLocal(timeZone = APP_TIMEZONE) {
   return formatarDiaLocal(new Date().toISOString(), timeZone);
 }
 
-function filtrarJogosDoDia(jogos, timeZone = APP_TIMEZONE) {
-  const hojeLocal = obterDiaAtualLocal(timeZone);
-  return (jogos || []).filter((jogo) => formatarDiaLocal(jogo?.horario || jogo?.date || jogo?.fixture?.date, timeZone) === hojeLocal);
+function obterDiaAlvoLocal(offsetDias = APP_TARGET_DAY_OFFSET, timeZone = APP_TIMEZONE) {
+  const agora = new Date();
+  const alvo = new Date(agora);
+  alvo.setDate(agora.getDate() + Number(offsetDias || 0));
+  return formatarDiaLocal(alvo.toISOString(), timeZone);
+}
+
+function filtrarJogosPorDiaAlvo(jogos, offsetDias = APP_TARGET_DAY_OFFSET, timeZone = APP_TIMEZONE) {
+  const diaAlvo = obterDiaAlvoLocal(offsetDias, timeZone);
+  return (jogos || []).filter((jogo) => formatarDiaLocal(jogo?.horario || jogo?.date || jogo?.fixture?.date, timeZone) === diaAlvo);
+}
+
+function separarPorEsporte(jogos) {
+  const lista = Array.isArray(jogos) ? jogos : [];
+  return {
+    futebol: lista.filter((j) => String(j?.esporte || "").toLowerCase() === "futebol"),
+    basquete: lista.filter((j) => String(j?.esporte || "").toLowerCase() === "basquete"),
+  };
+}
+
+function aplicarFiltroAlvoEPorEsporte(payloadBase, limit = 320) {
+  const jogosFiltrados = filtrarJogosPorDiaAlvo(payloadBase?.jogos || [], APP_TARGET_DAY_OFFSET)
+    .sort((a, b) => Number(b?.ranking?.score || 0) - Number(a?.ranking?.score || 0))
+    .slice(0, Math.max(10, Number(limit || 320)));
+  const grupos = separarPorEsporte(jogosFiltrados);
+
+  return {
+    ...payloadBase,
+    jogos: jogosFiltrados,
+    jogosFutebol: grupos.futebol,
+    jogosBasquete: grupos.basquete,
+    totalJogos: jogosFiltrados.length,
+    total: jogosFiltrados.length,
+    alvoData: obterDiaAlvoLocal(APP_TARGET_DAY_OFFSET),
+    alvoOffsetDias: APP_TARGET_DAY_OFFSET,
+    timezone: APP_TIMEZONE,
+  };
 }
 
 function normalizarJogoPublico(evento, esporte) {
@@ -349,11 +384,11 @@ async function obterFallbackJogosReais(limit = 40) {
     }
   }
 
-  const jogosUnicos = filtrarJogosDoDia(Array.from(unicos.values()))
+  const jogosUnicos = filtrarJogosPorDiaAlvo(Array.from(unicos.values()), APP_TARGET_DAY_OFFSET)
     .sort((a, b) => Number(b?.ranking?.score || 0) - Number(a?.ranking?.score || 0))
     .slice(0, Math.max(10, Number(limit || 40)));
 
-  const jogosPersistidos = filtrarJogosDoDia(obterJogosPersistidos());
+  const jogosPersistidos = filtrarJogosPorDiaAlvo(obterJogosPersistidos(), APP_TARGET_DAY_OFFSET);
   const jogosPersistidosValidos = Array.isArray(jogosPersistidos)
     ? jogosPersistidos.filter((j) => j?.casa && j?.fora && j?.liga)
     : [];
@@ -396,6 +431,9 @@ async function obterFallbackJogosReais(limit = 40) {
     relatorioMensal: [],
     banca: carregarBanca(),
     total: jogosBase.length,
+    alvoData: obterDiaAlvoLocal(APP_TARGET_DAY_OFFSET),
+    alvoOffsetDias: APP_TARGET_DAY_OFFSET,
+    timezone: APP_TIMEZONE,
   };
 }
 
@@ -539,13 +577,15 @@ app.get("/scanner-global", async (req, res) => {
 
   try {
     const resultadoScanner = await obterScannerGlobal(cacheMs);
-    const payload = lite ? compactarResultadoScanner(resultadoScanner, limit) : resultadoScanner;
+    const preparado = aplicarFiltroAlvoEPorEsporte(resultadoScanner, limit);
+    const payload = lite ? compactarResultadoScanner(preparado, limit) : preparado;
     res.json(payload);
   } catch (erro) {
     console.error("[ERRO /scanner-global]", erro instanceof Error ? erro.message : String(erro));
     try {
       const fallback = await obterFallbackJogosReais(limit);
-      const payload = lite ? compactarResultadoScanner(fallback, limit) : fallback;
+      const preparado = aplicarFiltroAlvoEPorEsporte(fallback, limit);
+      const payload = lite ? compactarResultadoScanner(preparado, limit) : preparado;
       res.json(payload);
     } catch (fallbackErro) {
       console.error("[ERRO /scanner-global fallback]", fallbackErro instanceof Error ? fallbackErro.message : String(fallbackErro));
@@ -566,13 +606,13 @@ app.get("/scanner-global", async (req, res) => {
 });
 
 app.get("/jogos-hoje", (req, res) => {
-  const dados = obterJogosPersistidos();
+  const dados = filtrarJogosPorDiaAlvo(obterJogosPersistidos(), APP_TARGET_DAY_OFFSET);
 
   res.json(dados);
 });
 
 app.get("/oportunidades", (req, res) => {
-  const jogos = obterJogosPersistidos();
+  const jogos = filtrarJogosPorDiaAlvo(obterJogosPersistidos(), APP_TARGET_DAY_OFFSET);
   const ordenados = [...jogos].sort(
     (a, b) => Number(b?.ranking?.score || 0) - Number(a?.ranking?.score || 0)
   );
@@ -589,6 +629,11 @@ app.get("/oportunidades", (req, res) => {
   res.json({
     total: oportunidades.length,
     criterioAplicado: criterio,
+    alvoData: obterDiaAlvoLocal(APP_TARGET_DAY_OFFSET),
+    alvoOffsetDias: APP_TARGET_DAY_OFFSET,
+    timezone: APP_TIMEZONE,
+    futebol: oportunidades.filter((j) => String(j?.esporte || "").toLowerCase() === "futebol"),
+    basquete: oportunidades.filter((j) => String(j?.esporte || "").toLowerCase() === "basquete"),
     oportunidades,
   });
 });

@@ -481,9 +481,12 @@
       const oportunidades = (dadosCache.scanner?.jogos || []).length
         ? (dadosCache.scanner?.jogos || [])
         : (dadosCache.oportunidades?.oportunidades || []);
+      const futebol = (dadosCache.scanner?.jogosFutebol || dadosCache.oportunidades?.futebol || []).slice(0, 120);
+      const basquete = (dadosCache.scanner?.jogosBasquete || dadosCache.oportunidades?.basquete || []).slice(0, 120);
+      const alvoData = dadosCache.scanner?.alvoData || dadosCache.oportunidades?.alvoData || '';
       const container = document.getElementById('lista-oportunidades');
-      
-      container.innerHTML = oportunidades.length ? oportunidades.map(j => `
+
+      const renderLista = (lista) => lista.map(j => `
         <div class="jogo-item">
           <div class="jogo-header">
             <div class="jogo-nome">${j.casa} x ${j.fora}</div>
@@ -495,7 +498,15 @@
             <div class="stat-item">Risco <strong>${Number(j?.risco?.riscoTotal || 0).toFixed(0)}%</strong></div>
           </div>
         </div>
-      `).join('') : '<p style="color: var(--muted); text-align: center;">Sem oportunidades</p>';
+      `).join('');
+      
+      container.innerHTML = oportunidades.length ? `
+        <div style="margin-bottom: 10px; color: var(--muted); font-size: 0.8rem;">Data alvo: <strong style="color: var(--txt);">${alvoData || 'amanha'}</strong></div>
+        <div class="card-title" style="margin-bottom: 8px;">⚽ Futebol (${futebol.length})</div>
+        ${futebol.length ? renderLista(futebol) : '<p style="color: var(--muted); text-align: center;">Sem jogos de futebol</p>'}
+        <div class="card-title" style="margin: 14px 0 8px;">🏀 Basquete (${basquete.length})</div>
+        ${basquete.length ? renderLista(basquete) : '<p style="color: var(--muted); text-align: center;">Sem jogos de basquete</p>'}
+      ` : '<p style="color: var(--muted); text-align: center;">Sem oportunidades</p>';
     }
 
     function renderTab3Mobile() {
