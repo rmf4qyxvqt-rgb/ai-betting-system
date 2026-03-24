@@ -361,6 +361,51 @@
       color: var(--txt);
     }
 
+    .favorite-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .favorite-team {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: rgba(16, 32, 50, 0.72);
+    }
+
+    .favorite-team.is-favorite {
+      border-color: rgba(29, 209, 161, 0.55);
+      background: linear-gradient(135deg, rgba(29, 209, 161, 0.18), rgba(16, 32, 50, 0.88));
+      box-shadow: inset 0 0 0 1px rgba(29, 209, 161, 0.18);
+    }
+
+    .favorite-label {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      color: var(--muted);
+    }
+
+    .favorite-team.is-favorite .favorite-label {
+      color: var(--ok);
+    }
+
+    .favorite-name {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: var(--txt);
+      margin-bottom: 4px;
+    }
+
+    .favorite-meta {
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
     .loading {
       text-align: center;
       padding: 20px;
@@ -733,6 +778,17 @@
       const jogo = analise?.jogo || {};
       const integridade = analise?.integridade || {};
       const riscoClass = integridade?.classificacao === 'alto' ? 'risk' : (integridade?.classificacao === 'moderado' ? 'warn' : 'ok');
+      const favorito = String(analise?.vencedorProvavel?.equipe || '');
+      const renderFavorito = (time, probabilidade) => {
+        const isFavorite = String(time || '') === favorito;
+        return `
+          <div class="favorite-team ${isFavorite ? 'is-favorite' : ''}">
+            <div class="favorite-label">${isFavorite ? 'Favorito da IA' : 'Equipe'}</div>
+            <div class="favorite-name">${escapeHtml(time)}</div>
+            <div class="favorite-meta">Probabilidade estimada: <strong>${Number(probabilidade || 0).toFixed(2)}%</strong></div>
+          </div>
+        `;
+      };
 
       if (esporte === 'basquete') {
         const proj = analise?.projecoes || {};
@@ -743,6 +799,10 @@
               <div class="analysis-line">Liga: <strong>${escapeHtml(jogo.liga)}</strong></div>
               <div class="analysis-line">Quem tem mais chance: <strong>${escapeHtml(analise?.vencedorProvavel?.equipe)}</strong> (${Number(analise?.vencedorProvavel?.probabilidade || 0).toFixed(2)}%)</div>
               <div class="analysis-line">Probabilidades: <strong>${escapeHtml(jogo.casa)} ${Number(analise?.probabilidades?.casa || 0).toFixed(2)}%</strong> | <strong>${escapeHtml(jogo.fora)} ${Number(analise?.probabilidades?.fora || 0).toFixed(2)}%</strong></div>
+              <div class="favorite-strip">
+                ${renderFavorito(jogo.casa, analise?.probabilidades?.casa)}
+                ${renderFavorito(jogo.fora, analise?.probabilidades?.fora)}
+              </div>
             </div>
             <div class="analysis-block">
               <h4>📈 Projeções de Pontos</h4>
@@ -769,6 +829,10 @@
             <div class="analysis-line">Liga: <strong>${escapeHtml(jogo.liga)}</strong></div>
             <div class="analysis-line">Maior probabilidade de vencer: <strong>${escapeHtml(analise?.vencedorProvavel?.equipe)}</strong> (${Number(analise?.vencedorProvavel?.probabilidade || 0).toFixed(2)}%)</div>
             <div class="analysis-line">Probabilidades 1X2: <strong>${escapeHtml(jogo.casa)} ${Number(probs?.casa || 0).toFixed(2)}%</strong> | Empate <strong>${Number(probs?.empate || 0).toFixed(2)}%</strong> | <strong>${escapeHtml(jogo.fora)} ${Number(probs?.fora || 0).toFixed(2)}%</strong></div>
+            <div class="favorite-strip">
+              ${renderFavorito(jogo.casa, probs?.casa)}
+              ${renderFavorito(jogo.fora, probs?.fora)}
+            </div>
           </div>
           <div class="analysis-block">
             <h4>📊 Médias projetadas do jogo</h4>
