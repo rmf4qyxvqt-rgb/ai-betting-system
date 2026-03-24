@@ -286,7 +286,7 @@
   <div class="container">
     <div class="header">
       <h1>⚽ IA Sports</h1>
-      <button class="refresh-btn" onclick="refreshDados()" title="Atualizar">🔄</button>
+      <button class="refresh-btn" onclick="refreshDados(this)" title="Atualizar">🔄</button>
     </div>
 
     <!-- ABA 1: RESUMO -->
@@ -346,10 +346,10 @@
   </div>
 
   <div class="tab-navigation">
-    <button class="tab-btn active" onclick="switchTabMobile('resumo')">📊 Resumo</button>
-    <button class="tab-btn" onclick="switchTabMobile('oportunidades')">🎯 Oportunidades</button>
-    <button class="tab-btn" onclick="switchTabMobile('historico')">📈 Histórico</button>
-    <button class="tab-btn" onclick="switchTabMobile('conformacao')">⚡ Forma</button>
+    <button class="tab-btn active" onclick="switchTabMobile('resumo', this)">📊 Resumo</button>
+    <button class="tab-btn" onclick="switchTabMobile('oportunidades', this)">🎯 Oportunidades</button>
+    <button class="tab-btn" onclick="switchTabMobile('historico', this)">📈 Histórico</button>
+    <button class="tab-btn" onclick="switchTabMobile('conformacao', this)">⚡ Forma</button>
   </div>
 
   <script>
@@ -359,40 +359,69 @@
 
     let dadosCache = {};
 
-    function switchTabMobile(tabName) {
+    function switchTabMobile(tabName, clickedButton) {
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.getElementById(`tab-${tabName}`).classList.add('active');
-      event.target.classList.add('active');
+      if (clickedButton) {
+        clickedButton.classList.add('active');
+      }
     }
 
-    async function refreshDados() {
-      const btn = event.target;
-      btn.style.animation = 'spin 0.8s linear infinite';
+    async function refreshDados(triggerButton) {
+      const btn = triggerButton || document.querySelector('.refresh-btn');
+      if (btn) {
+        btn.style.animation = 'spin 0.8s linear infinite';
+      }
+
+      const parseSafeJson = async (settledResult, fallback) => {
+        if (settledResult.status !== 'fulfilled') return fallback;
+        if (!settledResult.value.ok) return fallback;
+        try {
+          return await settledResult.value.json();
+        } catch {
+          return fallback;
+        }
+      };
 
       try {
-        const [scannerRes, alertasRes, clvRes, oportunidadesRes] = await Promise.all([
+        const [scannerRes, alertasRes, clvRes, oportunidadesRes] = await Promise.allSettled([
           fetch('/scanner-global'),
           fetch('/alertas'),
           fetch('/clv'),
           fetch('/oportunidades')
         ]);
 
-        const scanner = await scannerRes.json();
-        const alertas = await alertasRes.json();
-        const clv = await clvRes.json();
-        const oportunidades = await oportunidadesRes.json();
+        const scanner = await parseSafeJson(scannerRes, dadosCache.scanner || { jogos: [], metricas: {}, banca: {}, totalJogos: 0 });
+        const alertas = await parseSafeJson(alertasRes, dadosCache.alertas || { alertas: [] });
+        const clv = await parseSafeJson(clvRes, dadosCache.clv || { mediaCLV: 0, totalRegistros: 0, positivos: 0, negativos: 0 });
+        const oportunidades = await parseSafeJson(oportunidadesRes, dadosCache.oportunidades || { oportunidades: [] });
 
         dadosCache = { scanner, alertas, clv, oportunidades };
         renderTab1Mobile();
         renderTab2Mobile();
         renderTab3Mobile();
         renderTab4Mobile();
+
+        const falhas = [scannerRes, alertasRes, clvRes, oportunidadesRes].filter(r => r.status !== 'fulfilled' || !r.value.ok).length;
+        if (falhas > 0) {
+          const alertasEl = document.getElementById('alertas-mobile');
+          alertasEl.innerHTML = `
+            <div class="alert-box">
+              <span class="tag tag-warn">INSTAVEL</span>
+              <strong>Alguns dados estao indisponiveis</strong><br>
+              <small>Exibindo o que foi possivel carregar agora.</small>
+            </div>
+          ` + alertasEl.innerHTML;
+        }
       } catch (err) {
         console.error('Erro ao carregar dados:', err);
+        document.getElementById('lista-oportunidades').innerHTML = '<p style="color: var(--muted); text-align: center;">Erro ao carregar dados. Tente atualizar.</p>';
       }
 
-      btn.style.animation = '';
+      if (btn) {
+        btn.style.animation = '';
+      }
     }
 
     function renderTab1Mobile() {
@@ -490,7 +519,7 @@
       `).join('') : '<p style="color: var(--muted);">Sem dados</p>';
     }
 
-    refreshDados();
+    refreshDados(document.querySelector('.refresh-btn'));
     setInterval(refreshDados, 300000); // Atualiza a cada 5 min
   </script>
 </body>

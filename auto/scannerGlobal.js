@@ -27,6 +27,7 @@ const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY || "";
 const USE_PAID_SOURCES = String(process.env.USE_PAID_SOURCES || "false").toLowerCase() === "true";
 const LOOKAHEAD_DAYS = Math.max(1, Number(process.env.LOOKAHEAD_DAYS || 7));
 const CACHE_TTL_MINUTES = Math.max(1, Number(process.env.SOURCE_CACHE_TTL_MINUTES || 30));
+const IS_PRODUCTION = process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
 // ==================
 
 function listaDatasISO(qtdDias = 7) {
@@ -50,6 +51,10 @@ function carregarCacheFontes() {
 }
 
 function salvarCacheFontes(cache) {
+  if (IS_PRODUCTION) {
+    console.log("[VERCEL] Pulando escrita de cache (filesystem read-only)");
+    return;
+  }
   fs.writeFileSync(CACHE_DB, JSON.stringify(cache, null, 2));
 }
 
@@ -75,6 +80,10 @@ function lerDoCache(chave) {
 }
 
 function salvar(dados) {
+  if (IS_PRODUCTION) {
+    console.log("[VERCEL] Pulando escrita de dados (filesystem read-only)");
+    return;
+  }
   fs.writeFileSync(DB, JSON.stringify(dados, null, 2));
 }
 

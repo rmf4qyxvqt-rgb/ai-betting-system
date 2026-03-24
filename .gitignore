@@ -55,3 +55,4 @@ database/
 # Build
 dist/
 build/
+.vercel
