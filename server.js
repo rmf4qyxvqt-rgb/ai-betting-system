@@ -416,19 +416,22 @@ async function obterFallbackJogosReais(limit = 40) {
     }
   }
 
-  const jogosUnicos = filtrarJogosPorDiaAlvo(Array.from(unicos.values()), APP_TARGET_DAY_OFFSET)
-    .sort((a, b) => Number(b?.ranking?.score || 0) - Number(a?.ranking?.score || 0))
-    .slice(0, Math.max(10, Number(limit || 40)));
+  const jogosUnicos = Array.from(unicos.values())
+    .sort((a, b) => Number(b?.ranking?.score || 0) - Number(a?.ranking?.score || 0));
 
-  const jogosPersistidos = filtrarJogosPorDiaAlvo(obterJogosPersistidos(), APP_TARGET_DAY_OFFSET);
+  const jogosPersistidos = obterJogosPersistidos();
   const jogosPersistidosValidos = Array.isArray(jogosPersistidos)
     ? jogosPersistidos.filter((j) => j?.casa && j?.fora && j?.liga)
     : [];
 
   const limiteFinal = Math.max(10, Number(limit || 40));
-  const jogosSnapshot = jogosPersistidosValidos.slice(0, limiteFinal);
-  const jogosOnline = jogosUnicos.slice(0, limiteFinal);
+  const melhorOnline = resolverMelhorOffsetComDados(jogosUnicos, APP_TARGET_DAY_OFFSET, APP_TIMEZONE);
+  const melhorSnapshot = resolverMelhorOffsetComDados(jogosPersistidosValidos, APP_TARGET_DAY_OFFSET, APP_TIMEZONE);
+
+  const jogosOnline = filtrarJogosPorDiaAlvo(jogosUnicos, melhorOnline.offset, APP_TIMEZONE).slice(0, limiteFinal);
+  const jogosSnapshot = filtrarJogosPorDiaAlvo(jogosPersistidosValidos, melhorSnapshot.offset, APP_TIMEZONE).slice(0, limiteFinal);
   const jogosBase = jogosSnapshot.length > jogosOnline.length ? jogosSnapshot : jogosOnline;
+  const alvoOffsetEscolhido = jogosBase === jogosOnline ? melhorOnline.offset : melhorSnapshot.offset;
 
   return {
     status: "parcial",
@@ -463,8 +466,8 @@ async function obterFallbackJogosReais(limit = 40) {
     relatorioMensal: [],
     banca: carregarBanca(),
     total: jogosBase.length,
-    alvoData: obterDiaAlvoLocal(APP_TARGET_DAY_OFFSET),
-    alvoOffsetDias: APP_TARGET_DAY_OFFSET,
+    alvoData: obterDiaAlvoLocal(alvoOffsetEscolhido),
+    alvoOffsetDias: alvoOffsetEscolhido,
     timezone: APP_TIMEZONE,
   };
 }
@@ -609,7 +612,14 @@ app.get("/scanner-global", async (req, res) => {
 
   try {
     const resultadoScanner = await obterScannerGlobal(cacheMs);
-    const preparado = aplicarFiltroAlvoEPorEsporte(resultadoScanner, limit);
+    let preparado = aplicarFiltroAlvoEPorEsporte(resultadoScanner, limit);
+
+    // Se o scanner principal vier vazio, aplica fallback para nao quebrar a tela.
+    if (!Array.isArray(preparado?.jogos) || preparado.jogos.length === 0) {
+      const fallback = await obterFallbackJogosReais(limit);
+      preparado = aplicarFiltroAlvoEPorEsporte(fallback, limit);
+    }
+
     const payload = lite ? compactarResultadoScanner(preparado, limit) : preparado;
     res.json(payload);
   } catch (erro) {
