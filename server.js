@@ -328,15 +328,18 @@ async function obterFallbackJogosReais(limit = 40) {
     ? jogosPersistidos.filter((j) => j?.casa && j?.fora && j?.liga)
     : [];
 
-  const jogosBase = jogosUnicos.length > 0 ? jogosUnicos : jogosPersistidosValidos.slice(0, Math.max(10, Number(limit || 40)));
+  const limiteFinal = Math.max(10, Number(limit || 40));
+  const jogosSnapshot = jogosPersistidosValidos.slice(0, limiteFinal);
+  const jogosOnline = jogosUnicos.slice(0, limiteFinal);
+  const jogosBase = jogosSnapshot.length > jogosOnline.length ? jogosSnapshot : jogosOnline;
 
   return {
     status: "parcial",
     mensagem: "Fallback online aplicado por indisponibilidade do scanner principal.",
     totalJogos: jogosBase.length,
     fontes: {
-      futebol: { fonte: jogosUnicos.length > 0 ? "Fontes Publicas" : "Snapshot Persistido", capturados: jogosBase.filter((j) => j.esporte === "futebol").length },
-      basquete: { fonte: jogosUnicos.length > 0 ? "Fontes Publicas" : "Snapshot Persistido", capturados: jogosBase.filter((j) => j.esporte === "basquete").length },
+      futebol: { fonte: jogosBase === jogosOnline ? "Fontes Publicas" : "Snapshot Persistido", capturados: jogosBase.filter((j) => j.esporte === "futebol").length },
+      basquete: { fonte: jogosBase === jogosOnline ? "Fontes Publicas" : "Snapshot Persistido", capturados: jogosBase.filter((j) => j.esporte === "basquete").length },
       totalBruto: jogos.length,
       totalPosFiltro: jogosBase.length,
       totalPosGarantia: jogosBase.length,
@@ -345,9 +348,9 @@ async function obterFallbackJogosReais(limit = 40) {
       atualizadoEm: new Date().toISOString(),
     },
     diagnostico: {
-      status: jogosBase.length > 0 ? (jogosUnicos.length > 0 ? "ok_fallback" : "ok_snapshot") : "sem_jogos_reais",
+      status: jogosBase.length > 0 ? (jogosBase === jogosOnline ? "ok_fallback" : "ok_snapshot") : "sem_jogos_reais",
       recomendacoes: jogosBase.length > 0
-        ? [jogosUnicos.length > 0
+        ? [jogosBase === jogosOnline
             ? "Operando em fallback online devido a falha de persistencia no scanner principal."
             : "Operando com snapshot persistido por indisponibilidade temporaria das APIs externas."]
         : ["Sem jogos retornados pela fonte publica nesta janela."],
