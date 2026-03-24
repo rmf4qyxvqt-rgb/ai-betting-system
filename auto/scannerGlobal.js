@@ -42,6 +42,9 @@ function listaDatasISO(qtdDias = 7) {
 }
 
 function carregarCacheFontes() {
+  if (IS_PRODUCTION) {
+    return {};
+  }
   if (!fs.existsSync(CACHE_DB)) return {};
   try {
     return JSON.parse(fs.readFileSync(CACHE_DB));
@@ -88,6 +91,9 @@ function salvar(dados) {
 }
 
 function carregar() {
+  if (IS_PRODUCTION) {
+    return [];
+  }
   if (!fs.existsSync(DB)) return [];
   return JSON.parse(fs.readFileSync(DB));
 }
