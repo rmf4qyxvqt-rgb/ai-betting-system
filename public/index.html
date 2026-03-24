@@ -454,7 +454,7 @@
     </div>
   </div>
 
-  <div id="analysis-modal" class="modal-overlay" onclick="if(event.target===this){fecharAnalise();}">
+  <div id="analysis-modal" class="modal-overlay" onclick="fecharAnaliseOverlay(event, this)">
     <div class="modal-card">
       <div class="modal-head">
         <div class="modal-title">Análise Completa do Jogo</div>
@@ -642,7 +642,7 @@
       };
 
       const renderLista = (lista) => lista.map(j => `
-        <div class="jogo-item">
+        <div class="jogo-item" onclick="abrirAnalise('${encodeURIComponent(j.casa || '')}','${encodeURIComponent(j.fora || '')}','${encodeURIComponent(j.esporte || '')}','${encodeURIComponent(j.liga || '')}')">
           <div class="jogo-header">
             <div class="jogo-nome">${j.casa} x ${j.fora}</div>
             <strong class="accent">${formatarHora(j?.horario)}</strong>
@@ -653,7 +653,7 @@
             <div class="stat-item">Risco <strong>${Number(j?.risco?.riscoTotal || 0).toFixed(0)}%</strong></div>
           </div>
           <div style="margin-top:8px;">
-            <button class="sport-btn" style="font-size:0.72rem;" onclick="abrirAnalise('${encodeURIComponent(j.casa || '')}','${encodeURIComponent(j.fora || '')}','${encodeURIComponent(j.esporte || '')}','${encodeURIComponent(j.liga || '')}')">Abrir análise completa</button>
+            <button class="sport-btn" style="font-size:0.72rem;" onclick="abrirAnaliseBotao(event,'${encodeURIComponent(j.casa || '')}','${encodeURIComponent(j.fora || '')}','${encodeURIComponent(j.esporte || '')}','${encodeURIComponent(j.liga || '')}')">Abrir análise completa</button>
           </div>
         </div>
       `).join('');
@@ -713,6 +713,19 @@
 
     function fecharAnalise() {
       document.getElementById('analysis-modal').classList.remove('open');
+    }
+
+    function fecharAnaliseOverlay(evt, overlay) {
+      if (evt && evt.target === overlay) {
+        fecharAnalise();
+      }
+    }
+
+    function abrirAnaliseBotao(evt, casaEnc, foraEnc, esporteEnc, ligaEnc) {
+      if (evt && typeof evt.stopPropagation === 'function') {
+        evt.stopPropagation();
+      }
+      abrirAnalise(casaEnc, foraEnc, esporteEnc, ligaEnc);
     }
 
     function renderAnaliseHtml(analise) {
